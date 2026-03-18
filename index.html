@@ -308,13 +308,6 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
 
   <div id="cycleWarning"></div>
 
-  <!-- ═══ MAIN LAYOUT matching the sketch ═══
-       Left col  : Graph diagram (tall, spans rows 1+2)
-       Right col : row-1 = dist | pred side by side
-                   row-2 = output (all-pairs) full right width
-       Full width: Step History
-  -->
-
   <!-- k badge above everything -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
     <div class="section-head" style="margin:0;">Graph &amp; Matrices</div>
@@ -564,21 +557,11 @@ function renderStep(idx){
   const od=s.oldD===INF?"∞":s.oldD,vd=s.via===INF?"∞":s.via,nd=s.newD===INF?"∞":s.newD;
   const nt=s.newT===-1?"—":L(s.newT);
 
-  // Mini trace bar — shows k / i / j and the verdict at a glance
   const verdict=s.stepType===3
     ? `<span style="color:#f87171;font-weight:700;">✗ No update</span>`
     : s.stepType===4
     ? `<span style="color:#4ade80;font-weight:700;">✔ dist updated: ${od} → ${nd}</span>`
     : `<span style="color:#a78bfa;font-weight:700;">✔ pred updated → ${nt}</span>`;
-    `<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:11.5px;">
-      <span style="color:#3d4870;">k =</span><span style="color:#fbbf24;font-weight:700;">${ik}</span>
-      <span style="color:#3d4870;">i =</span><span style="color:#f87171;font-weight:700;">${ii}</span>
-      <span style="color:#3d4870;">j =</span><span style="color:#4ade80;font-weight:700;">${ij}</span>
-      <span style="color:#1a1f35;">|</span>
-      <span style="color:#3d4870;">via: ${od} vs ${vd}</span>
-      <span style="color:#1a1f35;">|</span>
-      ${verdict}
-    </div>`;
   let ex="";
   if(s.stepType===3){
     ex=`🔍 <strong>Checking</strong> <span class="ni">${ii}</span>→<span class="nj">${ij}</span> via <span class="nk">${ik}</span><br>
@@ -700,7 +683,6 @@ function renderOutput(){
 
 /* ── DRAW MATRICES ── */
 function drawDist(M,hl=[],upd=[],k=-1){
-  // Graph ALWAYS shows original edge weights — never the evolving dist matrix
   updateGraphSvg(graph,k);
   let h=`<div class="m-labels-row">`+Array.from({length:n},(_,j)=>`<div class="m-col-lbl">${LETTERS[j]}</div>`).join("")+`</div>`;
   for(let i=0;i<n;i++){
@@ -744,33 +726,75 @@ function drawPred(T,hl=[],upd=[],k=-1){
 /* ── GRAPH SVG ── */
 const NP=[{x:80,y:75},{x:240,y:75},{x:240,y:245},{x:80,y:245}];
 const NR=26;
-const EC={
-  '0-1':{c:24,s:1},'1-0':{c:24,s:-1},
-  '1-2':{c:24,s:1},'2-1':{c:24,s:-1},
-  '2-3':{c:24,s:-1},'3-2':{c:24,s:1},
-  '0-3':{c:24,s:-1},'3-0':{c:24,s:1},
-  '0-2':{c:42,s:1},'2-0':{c:42,s:-1},
-  '1-3':{c:42,s:-1},'3-1':{c:42,s:1},
-};
+
+/**
+ * Compute edge geometry using the RIGHT-HAND RULE:
+ * Every edge i→j always curves to the RIGHT of its direction of travel.
+ *
+ * This means A→B and B→A arc in opposite directions and never overlap.
+ * The "right" side is: rotate the direction vector 90° clockwise.
+ *   direction (ux,uy) → right-normal = (uy, -ux)
+ *
+ * Curvature amount:
+ *   - Adjacent edges (share a side of the square): 28px
+ *   - Diagonal edges: 44px
+ *   - One-way edges (no reverse edge exists): straight line (0px)
+ *
+ * Label placed at t=0.25 (near the source/tail of the arrow).
+ */
 function geom(i,j){
-  const f=NP[i],t=NP[j],dx=t.x-f.x,dy=t.y-f.y,dist=Math.sqrt(dx*dx+dy*dy);
-  const ux=dx/dist,uy=dy/dist,nx=-uy,ny=ux;
-  const sx=f.x+ux*NR,sy=f.y+uy*NR,ex=t.x-ux*(NR+4),ey=t.y-uy*(NR+4);
-  const cfg=EC[`${i}-${j}`]||{c:0,s:1};
-  const diag=(i===0&&j===2)||(i===2&&j===0)||(i===1&&j===3)||(i===3&&j===1);
-  const both=graph.length>0&&graph[j]&&graph[j][i]!==INF;
-  const ca=(diag||both)?cfg.c:0;
-  const cpx=(sx+ex)/2+nx*ca*cfg.s,cpy=(sy+ey)/2+ny*ca*cfg.s;
-  const pd=ca>0?`M${sx.toFixed(1)},${sy.toFixed(1)} Q${cpx.toFixed(1)},${cpy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}`:`M${sx.toFixed(1)},${sy.toFixed(1)} L${ex.toFixed(1)},${ey.toFixed(1)}`;
-  const lp=diag?18:(ca>0?12:14);
-  return{pd,lx:(ca>0?cpx:(sx+ex)/2)+nx*lp*cfg.s,ly:(ca>0?cpy:(sy+ey)/2)+ny*lp*cfg.s};
+  const f=NP[i], tgt=NP[j];
+  const dx=tgt.x-f.x, dy=tgt.y-f.y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  const ux=dx/dist, uy=dy/dist;        // unit vector: i → j
+
+  // RIGHT-hand normal (rotate direction 90° clockwise)
+  const rx=uy, ry=-ux;
+
+  // Edge endpoints (pulled back from node centres by radius)
+  const sx=f.x+ux*NR,   sy=f.y+uy*NR;
+  const ex=tgt.x-ux*(NR+4), ey=tgt.y-uy*(NR+4);
+
+  // Determine curvature: only curve when a reverse edge also exists
+  const isDiag=(i===0&&j===2)||(i===2&&j===0)||(i===1&&j===3)||(i===3&&j===1);
+  const hasReverse=graph.length>0&&graph[j]&&graph[j][i]!==INF;
+  const curveAmt = hasReverse ? (isDiag ? 44 : 28) : 0;
+
+  // Control point: midpoint shifted right of the travel direction
+  const mx=(sx+ex)/2, my=(sy+ey)/2;
+  const cpx=mx+rx*curveAmt;
+  const cpy=my+ry*curveAmt;
+
+  // SVG path
+  const pd = curveAmt>0
+    ? `M${sx.toFixed(1)},${sy.toFixed(1)} Q${cpx.toFixed(1)},${cpy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}`
+    : `M${sx.toFixed(1)},${sy.toFixed(1)} L${ex.toFixed(1)},${ey.toFixed(1)}`;
+
+  // Label position: t=0.25 along the bezier (near source/tail)
+  const tL=0.25, mt=1-tL;
+  const bx=mt*mt*sx + 2*mt*tL*cpx + tL*tL*ex;
+  const by=mt*mt*sy + 2*mt*tL*cpy + tL*tL*ey;
+
+  // Tangent at t=0.25 for perpendicular label offset
+  const tanx=2*mt*(cpx-sx)+2*tL*(ex-cpx);
+  const tany=2*mt*(cpy-sy)+2*tL*(ey-cpy);
+  const tlen=Math.sqrt(tanx*tanx+tany*tany)||1;
+  // Label offset direction: always to the right of travel at that point
+  const lnx=tany/tlen, lny=-tanx/tlen;
+  const labelOffset=curveAmt>0?11:13;
+  const lx=bx+lnx*labelOffset;
+  const ly=by+lny*labelOffset;
+
+  return{pd,lx,ly};
 }
+
 function updateGraphSvg(M,k){
   if(!M||M.length!==4)return;
   const el=document.getElementById("edgeLayer"),nl=document.getElementById("nodeLayer");
   if(!el||!nl)return;
   const ns="http://www.w3.org/2000/svg";
   el.innerHTML="";nl.innerHTML="";
+
   const drawNodes=()=>NP.forEach((pos,idx)=>{
     const isK=k===idx;
     const c=document.createElementNS(ns,"circle");
@@ -787,7 +811,9 @@ function updateGraphSvg(M,k){
     t.setAttribute("fill",isK?"#4ade80":"#e2e8f0");
     t.textContent=LETTERS[idx];nl.appendChild(t);
   });
+
   drawNodes();
+
   for(let i=0;i<4;i++)for(let j=0;j<4;j++){
     if(i===j)continue;
     const v=M[i][j];if(v===INF)continue;
@@ -795,23 +821,40 @@ function updateGraphSvg(M,k){
     const col=isK?"#22c55e":(neg?"#a78bfa":"#f59e0b");
     const mk=isK?"url(#ak)":(neg?"url(#an)":"url(#ap)");
     const{pd,lx,ly}=geom(i,j);
+
+    // Draw the edge path
     const p=document.createElementNS(ns,"path");
     p.setAttribute("d",pd);p.setAttribute("fill","none");
     p.setAttribute("stroke",col);p.setAttribute("stroke-width",isK?"2.2":"1.6");
     p.setAttribute("marker-end",mk);
     el.appendChild(p);
-    const lt=String(v),bw=Math.max(lt.length*8+10,22),bh=16;
+
+    // Draw the weight label background pill
+    const lt=String(v);
+    const charW=7.5;
+    const bw=Math.max(lt.length*charW+10,22);
+    const bh=16;
     const bg=document.createElementNS(ns,"rect");
-    bg.setAttribute("x",(lx-bw/2).toFixed(1));bg.setAttribute("y",(ly-bh/2).toFixed(1));
+    bg.setAttribute("x",(lx-bw/2).toFixed(1));
+    bg.setAttribute("y",(ly-bh/2).toFixed(1));
     bg.setAttribute("width",bw);bg.setAttribute("height",bh);bg.setAttribute("rx","3");
-    bg.setAttribute("fill","#0f1117");bg.setAttribute("opacity","0.96");
+    bg.setAttribute("fill","#0f1117");bg.setAttribute("stroke",col);bg.setAttribute("stroke-width","0.8");
+    bg.setAttribute("opacity","0.97");
     el.appendChild(bg);
+
+    // Draw the weight label text
     const tx=document.createElementNS(ns,"text");
-    tx.setAttribute("x",lx.toFixed(1));tx.setAttribute("y",(ly+4.5).toFixed(1));
-    tx.setAttribute("text-anchor","middle");tx.setAttribute("font-family","JetBrains Mono,monospace");
-    tx.setAttribute("font-size","11");tx.setAttribute("font-weight","600");tx.setAttribute("fill",col);
-    tx.textContent=lt;el.appendChild(tx);
+    tx.setAttribute("x",lx.toFixed(1));
+    tx.setAttribute("y",(ly+4.5).toFixed(1));
+    tx.setAttribute("text-anchor","middle");
+    tx.setAttribute("font-family","JetBrains Mono,monospace");
+    tx.setAttribute("font-size","11");tx.setAttribute("font-weight","700");
+    tx.setAttribute("fill",col);
+    tx.textContent=lt;
+    el.appendChild(tx);
   }
+
+  // Draw nodes on top so labels don't cover node circles
   drawNodes();
 }
 
