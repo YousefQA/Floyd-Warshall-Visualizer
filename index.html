@@ -139,6 +139,7 @@
   .col-label { width: 64px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-family: 'JetBrains Mono', monospace; color: var(--muted); font-weight: 600; }
   .cell { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 1rem; font-weight: 600; transition: all 0.2s; color: var(--text); }
   .cell.inf      { color: var(--muted); font-size: 1.1rem; }
+  .cell.negative { color: #a78bfa; }
   .cell.diagonal { background: var(--bg4); color: var(--muted); }
   .cell.comparing{ background: var(--compare); border-color: var(--compare-border); color: #fff; transform: scale(1.06); box-shadow: 0 0 10px rgba(232,168,53,0.4); }
   .cell.updated  { background: var(--update); border-color: var(--update-border); color: #fff; transform: scale(1.1); box-shadow: 0 0 12px rgba(52,201,138,0.45); }
@@ -398,7 +399,7 @@ function randomizeGraph() {
     graph.push([]);
     for (let j = 0; j < n; j++) {
       if (i === j) graph[i].push(0);
-      else graph[i].push(Math.random() < 0.35 ? INF : Math.floor(Math.random() * 20) + 1);
+      else graph[i].push(Math.random() < 0.35 ? INF : Math.floor(Math.random() * 21) - 5);
     }
   }
   fullReset(false);
@@ -447,8 +448,8 @@ function buildSteps() {
   for (let k=0;k<n;k++) for (let i=0;i<n;i++) for (let j=0;j<n;j++) {
     comp++;
     const old   = d[i][j];
-    const via   = (d[i][k]===INF||d[k][j]===INF) ? INF : d[i][k]+d[k][j];
-    const improved = via < old;
+    const via   = (d[i][k] === INF || d[k][j] === INF) ? INF : d[i][k] + d[k][j];
+    const improved = via < old && via !== INF;
     if (improved) { d[i][j]=via; p[i][j]=p[k][j]; upd++; }
 
     steps.push({
@@ -655,6 +656,7 @@ function buildMatrixHTML(data, hl=[], upd=[], k=-1) {
       let cls="cell";
       if (val===INF) cls+=" inf";
       if (i===j) cls+=" diagonal";
+      else if (val < 0 && !upd.includes(key) && !hl.includes(key)) cls+=" negative";
       if (upd.includes(key)) cls+=" updated";
       else if (hl.includes(key)) cls+=" comparing";
       else if (k>=0&&(i===k||j===k)) cls+=" via-row";
