@@ -831,15 +831,14 @@ function updateGraphSvg(M,k){
 
     // Draw the weight label background pill
     const lt=String(v);
-    const charW=7.5;
-    const bw=Math.max(lt.length*charW+10,22);
-    const bh=16;
+    const charW=8;
+    const bw=Math.max(lt.length*charW+12,24);
+    const bh=18;
     const bg=document.createElementNS(ns,"rect");
     bg.setAttribute("x",(lx-bw/2).toFixed(1));
     bg.setAttribute("y",(ly-bh/2).toFixed(1));
-    bg.setAttribute("width",bw);bg.setAttribute("height",bh);bg.setAttribute("rx","3");
-    bg.setAttribute("fill","#0f1117");bg.setAttribute("stroke",col);bg.setAttribute("stroke-width","0.8");
-    bg.setAttribute("opacity","0.97");
+    bg.setAttribute("width",bw);bg.setAttribute("height",bh);bg.setAttribute("rx","4");
+    bg.setAttribute("fill","#13151f");bg.setAttribute("stroke",col);bg.setAttribute("stroke-width","1.5");
     el.appendChild(bg);
 
     // Draw the weight label text
@@ -848,7 +847,7 @@ function updateGraphSvg(M,k){
     tx.setAttribute("y",(ly+4.5).toFixed(1));
     tx.setAttribute("text-anchor","middle");
     tx.setAttribute("font-family","JetBrains Mono,monospace");
-    tx.setAttribute("font-size","11");tx.setAttribute("font-weight","700");
+    tx.setAttribute("font-size","12");tx.setAttribute("font-weight","700");
     tx.setAttribute("fill",col);
     tx.textContent=lt;
     el.appendChild(tx);
