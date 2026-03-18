@@ -2,317 +2,1305 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Floyd-Warshall Visualizer</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floyd–Warshall Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-body {
-    margin:0;
-    font-family: Arial;
-    background:#121212;
-    color:white;
-}
+  :root {
+    --bg: #0d0e0f;
+    --bg2: #141618;
+    --bg3: #1a1d20;
+    --bg4: #22262b;
+    --border: #2e333a;
+    --text: #edeef0;
+    --muted: #7a8491;
+    --accent: #e8a835;
+    --green: #34c98a;
+    --red: #e05c5c;
+    --orange: #e8a835;
+    --purple: #a78bfa;
+    --compare: #7a4200;
+    --update: #0e4a32;
+    --compare-border: #e8a835;
+    --update-border: #34c98a;
+    --via-color: #1a2a1a;
+    --via-border: #34c98a;
+  }
 
-/* Layout */
-.container {
-    display:flex;
-}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-.left {
-    width:420px;
-    background:#1e1e1e;
-    padding:15px;
-    height:100vh;
-    overflow:auto;
-}
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
 
-.right {
-    flex:1;
-    padding:20px;
-}
+  /* HEADER */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  header .subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .badge {
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+  }
 
-/* Buttons */
-button {
-    padding:8px;
-    margin:5px;
-    background:#333;
-    color:white;
-    border:none;
-    cursor:pointer;
-}
-button:hover { background:#555; }
+  /* LAYOUT */
+  .app {
+    display: flex;
+    height: calc(100vh - 57px);
+  }
 
-/* Matrix */
-.matrix {
-    display:grid;
-    gap:5px;
-    margin-top:20px;
-}
-.cell {
-    width:50px;
-    height:50px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#222;
-    border-radius:6px;
-    transition:0.3s;
-}
+  .sidebar {
+    width: 360px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
 
-.compare { background:red; }
-.update { background:green; }
+  .main {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
 
-/* Panels */
-.box {
-    background:#1c1c1c;
-    padding:10px;
-    margin-top:15px;
-    border-radius:8px;
-}
+  /* SIDEBAR SECTIONS */
+  .s-section {
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+  }
+  .s-section h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
 
-/* Pseudocode */
-.pseudo div {
-    padding:4px;
-}
-.active {
-    background:#444;
-}
+  /* CONTROLS */
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg4);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  button:hover { background: var(--bg3); border-color: var(--muted); }
+  button.primary {
+    background: #3a2800;
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  button.primary:hover { background: #4d3600; }
+  button.danger {
+    background: #3b1a1a;
+    border-color: var(--red);
+    color: var(--red);
+  }
 
-/* Responsive */
-@media(max-width:980px){
-    .container{flex-direction:column;}
-    .left{width:100%;height:auto;}
-}
+  .speed-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .speed-row label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+  input[type=range] {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+  .speed-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    min-width: 32px;
+  }
+
+  /* STATUS BOX */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .stat-box .label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .stat-box .value {
+    font-size: 1.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 2px;
+  }
+  #status-display {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--bg4);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    margin-top: 10px;
+  }
+  #status-display.playing { background: #0a2e1e; color: var(--green); border-color: var(--green); }
+  #status-display.paused { background: #2e1f00; color: var(--orange); border-color: var(--orange); }
+  #status-display.ready { background: #2e1f00; color: var(--accent); border-color: var(--accent); }
+  #status-display.done { background: #0a2e1e; color: var(--green); border-color: var(--green); }
+
+  /* PRESETS */
+  .preset-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* PSEUDOCODE */
+  .pseudo-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.8;
+  }
+  .pseudo-line {
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--muted);
+    transition: all 0.2s;
+    white-space: pre;
+  }
+  .pseudo-line.active {
+    background: #2e1f00;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .pseudo-line.kw { color: #ff7b72; }
+
+  /* EXPLANATION */
+  #explain-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--muted);
+    min-height: 60px;
+    transition: all 0.3s;
+  }
+  #explain-box .highlight-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+  }
+  #explain-box .node-i { color: var(--red); }
+  #explain-box .node-j { color: var(--green); }
+  #explain-box .node-k { color: var(--accent); }
+  #explain-box .result-better { color: var(--green); }
+  #explain-box .result-same { color: var(--muted); }
+
+  /* LEGEND */
+  .legend-grid { display: flex; flex-direction: column; gap: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+  .legend-swatch {
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    border: 1px solid;
+    flex-shrink: 0;
+  }
+
+  /* COMPLEXITY */
+  .complex-row {
+    display: flex;
+    gap: 12px;
+  }
+  .complex-pill {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+  }
+  .complex-pill span { color: var(--muted); font-size: 0.72rem; display: block; }
+
+  /* MAIN PANEL */
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .panel-header h2 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+  }
+  .k-indicator {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--accent);
+    background: var(--bg3);
+    border: 1px solid var(--via-border);
+    border-radius: 6px;
+    padding: 4px 12px;
+  }
+
+  /* MATRIX */
+  .matrix-wrapper {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .matrix-labels-row { display: flex; gap: 4px; margin-bottom: 4px; padding-left: 44px; }
+  .matrix-row { display: flex; gap: 4px; align-items: center; }
+  .matrix-row-label {
+    width: 36px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .col-label {
+    width: 44px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .cell {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    color: var(--text);
+  }
+  .cell.inf { color: var(--muted); font-size: 1rem; }
+  .cell.diagonal { background: var(--bg4); color: var(--muted); }
+  .cell.comparing {
+    background: var(--compare);
+    border-color: var(--compare-border);
+    color: #fff;
+    transform: scale(1.05);
+  }
+  .cell.updated {
+    background: var(--update);
+    border-color: var(--update-border);
+    color: #fff;
+    transform: scale(1.08);
+  }
+  .cell.via-row, .cell.via-col {
+    background: var(--via-color);
+    border-color: var(--via-border);
+  }
+
+  /* HISTORY TABLE */
+  .history-table-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .history-table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .history-table-wrap th {
+    background: var(--bg3);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .history-table-wrap td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .history-table-wrap tr:last-child td { border-bottom: none; }
+  .history-table-wrap tr.updated-row td { color: var(--green); }
+  .history-table-wrap tr.same-row td { color: var(--muted); }
+  .tag-upd {
+    background: #0d2b1a;
+    border: 1px solid var(--green);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.7rem;
+    color: var(--green);
+  }
+  .tag-same {
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  /* GROWTH CHART */
+  .chart-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .chart-section h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  #growthChart {
+    display: block;
+    width: 100%;
+  }
+
+  /* PREDECESSOR / PATH */
+  .path-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .path-section h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .path-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .path-controls select {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    padding: 6px 10px;
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+  }
+  #path-output {
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    padding: 12px;
+    background: var(--bg3);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .path-node {
+    display: inline-block;
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    color: var(--accent);
+    margin: 0 2px;
+  }
+  .path-arrow { color: var(--muted); margin: 0 2px; }
+
+  /* CUSTOM GRAPH INPUT */
+  .custom-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .custom-section h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .custom-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .custom-row label { font-size: 0.8rem; color: var(--muted); min-width: 90px; }
+  .custom-row input {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    padding: 6px 10px;
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  /* WELCOME PANEL */
+  .welcome-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .welcome-panel h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .welcome-panel p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+  .formula-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    margin: 12px 0;
+  }
+  .complexity-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 10px; }
+  .complexity-table th {
+    background: var(--bg3);
+    padding: 6px 10px;
+    text-align: left;
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  .complexity-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); }
+  .complexity-table td:first-child { font-family: 'JetBrains Mono', monospace; color: var(--accent); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+  @media(max-width: 900px) {
+    .app { flex-direction: column; height: auto; }
+    .sidebar { width: 100%; }
+    .main { padding: 16px; }
+  }
 </style>
 </head>
-
 <body>
 
-<div class="container">
+<header>
+  <div>
+    <h1>Floyd–Warshall Visualizer</h1>
+    <div class="subtitle">All-Pairs Shortest Path · Dynamic Programming</div>
+  </div>
+  <div class="badge">All-Pairs Shortest Path</div>
+</header>
 
-<div class="left">
+<div class="app">
 
-<h2>Controls</h2>
+  <!-- SIDEBAR -->
+  <div class="sidebar">
 
-<button onclick="buildSteps()">Build</button>
-<button onclick="step()">Step</button>
-<button onclick="play()">Play</button>
-<button onclick="pause()">Pause</button>
-<button onclick="reset()">Reset</button>
+    <div class="s-section">
+      <h3>Controls</h3>
+      <div class="btn-row">
+        <button class="primary" onclick="buildSteps()">Build Steps</button>
+        <button onclick="stepForward()">Step ▶</button>
+        <button onclick="playAnim()">▶ Play</button>
+        <button onclick="pauseAnim()">⏸ Pause</button>
+        <button class="danger" onclick="resetAll()">↺ Reset</button>
+      </div>
+      <div class="speed-row">
+        <label>Speed</label>
+        <input type="range" min="0.25" max="4" step="0.25" value="1" oninput="setSpeed(this.value)">
+        <span class="speed-val" id="speedVal">1×</span>
+      </div>
+    </div>
 
-<br><br>
+    <div class="s-section">
+      <h3>Status</h3>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="label">Comparisons</div>
+          <div class="value" id="compCount">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Updates</div>
+          <div class="value" id="updCount">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Step</div>
+          <div class="value" id="stepDisplay">0/0</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Phase (k)</div>
+          <div class="value" id="kDisplay">—</div>
+        </div>
+      </div>
+      <div id="status-display">Idle</div>
+    </div>
 
-Speed:
-<input type="range" min="0.25" max="4" step="0.25" value="1"
-oninput="setSpeed(this.value)">
-<span id="speedText">1x</span>
+    <div class="s-section">
+      <h3>Presets</h3>
+      <div class="preset-btns">
+        <button onclick="loadPreset(1)">Example 1 (4×4)</button>
+        <button onclick="loadPreset(2)">Example 2 (3×3)</button>
+        <button onclick="loadPreset(3)">Example 3 (3×3)</button>
+        <button onclick="loadPreset(4)">Example 4 (5×5)</button>
+      </div>
+    </div>
 
-<div class="box">
-Step: <span id="stepCount">0/0</span><br>
-Status: <span id="status">Idle</span>
-</div>
+    <div class="s-section">
+      <h3>Pseudocode</h3>
+      <div class="pseudo-block" id="pseudoBlock"></div>
+    </div>
 
-<div class="box">
-<h3>Presets</h3>
-<button onclick="preset(1)">Example 1</button>
-<button onclick="preset(2)">Example 2</button>
-<button onclick="preset(3)">Example 3</button>
-</div>
+    <div class="s-section">
+      <h3>Step Explanation</h3>
+      <div id="explain-box">Click <strong>Build Steps</strong>, then <strong>Step</strong> or <strong>Play</strong> to see line-by-line explanations.</div>
+    </div>
 
-<div class="box">
-<h3>Statistics</h3>
-Comparisons: <span id="comp">0</span><br>
-Updates: <span id="upd">0</span>
-</div>
+    <div class="s-section">
+      <h3>Algorithm Type</h3>
+      <div style="font-size:0.82rem;color:var(--muted);line-height:1.6;">
+        <strong style="color:var(--accent)">Dynamic Programming</strong><br>
+        Builds the solution bottom-up by considering each vertex as an intermediate node.
+        The key recurrence: <span style="font-family:JetBrains Mono;color:var(--purple)">dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])</span>
+      </div>
+    </div>
 
-<div class="box">
-<h3>Pseudocode</h3>
-<div id="pseudo" class="pseudo"></div>
-</div>
+    <div class="s-section">
+      <h3>Complexity</h3>
+      <div class="complex-row">
+        <div class="complex-pill"><span>Time</span>O(V³)</div>
+        <div class="complex-pill"><span>Space</span>O(V²)</div>
+        <div class="complex-pill"><span>Works On</span>Neg. Edges ✓</div>
+      </div>
+    </div>
 
-<div class="box">
-<h3>Explanation</h3>
-<div id="explain"></div>
-</div>
+    <div class="s-section">
+      <h3>Legend</h3>
+      <div class="legend-grid">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:var(--compare);border-color:var(--compare-border)"></div>
+          <span>Currently comparing dist[i][j]</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:var(--update);border-color:var(--update-border)"></div>
+          <span>Path improved — updated!</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:var(--via-color);border-color:var(--via-border)"></div>
+          <span>Via-vertex row &amp; column (k)</span>
+        </div>
+      </div>
+    </div>
 
-<div class="box">
-<h3>Algorithm Type</h3>
-Dynamic Programming (DP)
-</div>
+  </div>
 
-<div class="box">
-<h3>Complexity</h3>
-Time: O(V³)<br>
-Space: O(V²)
-</div>
+  <!-- MAIN -->
+  <div class="main">
 
-</div>
+    <!-- WELCOME -->
+    <div class="welcome-panel">
+      <h2>Floyd–Warshall: All-Pairs Shortest Path</h2>
+      <p>Floyd–Warshall finds the shortest path between <em>every pair</em> of vertices in a weighted graph. Unlike Dijkstra's, it handles negative edge weights (but not negative cycles).</p>
+      <div class="formula-block">dist[i][j] = min( dist[i][j],  dist[i][k] + dist[k][j] )</div>
+      <p>For each intermediate vertex <strong>k</strong>, we check: "Is it cheaper to go from <strong>i</strong> to <strong>j</strong> by passing through <strong>k</strong>?"</p>
+      <table class="complexity-table">
+        <tr><th>Algorithm</th><th>Time</th><th>Negative Edges</th><th>All Pairs</th></tr>
+        <tr><td>Dijkstra (×V)</td><td>O(V³) or better</td><td>✗</td><td>✓</td></tr>
+        <tr><td>Bellman-Ford (×V)</td><td>O(V²·E)</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Floyd-Warshall</td><td>O(V³)</td><td>✓</td><td>✓</td></tr>
+      </table>
+    </div>
 
-<div class="right">
-<h2>Distance Matrix</h2>
-<div id="matrix" class="matrix"></div>
-</div>
+    <!-- MATRIX + K indicator -->
+    <div>
+      <div class="panel-header">
+        <h2>Distance Matrix</h2>
+        <div class="k-indicator" id="kIndicator">Select a preset to begin</div>
+      </div>
+      <div class="matrix-wrapper" id="matrixWrapper">
+        <div style="color:var(--muted);font-size:0.85rem;padding:20px;">Load a preset to display the matrix.</div>
+      </div>
+    </div>
 
+    <!-- PATH RECONSTRUCTION -->
+    <div class="path-section">
+      <h3>Path Reconstruction</h3>
+      <div class="path-controls">
+        <label style="font-size:0.82rem;color:var(--muted);">From</label>
+        <select id="pathFrom"></select>
+        <label style="font-size:0.82rem;color:var(--muted);">To</label>
+        <select id="pathTo"></select>
+        <button onclick="findPath()">Find Shortest Path</button>
+      </div>
+      <div id="path-output">Run the algorithm fully (Play until done), then select nodes above.</div>
+    </div>
+
+    <!-- HISTORY TABLE -->
+    <div class="history-table-wrap" id="historySection">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>k (via)</th><th>i (from)</th><th>j (to)</th>
+            <th>Old dist[i][j]</th><th>New dist[i][j]</th><th>Result</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:14px;">No steps yet — click Build Steps.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- GROWTH CHART -->
+    <div class="chart-section">
+      <h3>O(V³) Growth — Operations vs. Graph Size</h3>
+      <canvas id="growthChart" height="180"></canvas>
+    </div>
+
+    <!-- CUSTOM GRAPH -->
+    <div class="custom-section">
+      <h3>Custom Graph Input</h3>
+      <div class="custom-row">
+        <label>Nodes (N)</label>
+        <input type="number" id="customN" value="3" min="2" max="6" style="width:60px;flex:none;">
+      </div>
+      <div id="customEdgeInputs"></div>
+      <div style="margin-top:10px;">
+        <button onclick="buildCustomEdges()">Generate Edge Inputs</button>
+        <button onclick="applyCustomGraph()">Apply & Visualize</button>
+      </div>
+      <div id="customMsg" style="margin-top:8px;font-size:0.78rem;color:var(--muted);"></div>
+    </div>
+
+  </div>
 </div>
 
 <script>
-
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
 let graph = [];
 let dist = [];
+let pred = [];
 let steps = [];
 let stepIndex = 0;
 let speed = 1;
-let timer;
+let animTimer = null;
+let comparisonsCount = 0;
+let updatesCount = 0;
+let historyLog = [];
+let n = 0;
 
-let comp=0, upd=0;
+const INF = Infinity;
 
-const pseudoLines = [
-"for k = 1 to V",
-" for i = 1 to V",
-"  for j = 1 to V",
-"   if dist[i][j] > dist[i][k] + dist[k][j]",
-"    dist[i][j] = dist[i][k] + dist[k][j]"
+const PSEUDO_LINES = [
+  { text: "for k = 0 to V−1:", indent: 0, kw: true },
+  { text: "  for i = 0 to V−1:", indent: 1, kw: true },
+  { text: "    for j = 0 to V−1:", indent: 2, kw: true },
+  { text: "      if dist[i][j] > dist[i][k] + dist[k][j]:", indent: 3 },
+  { text: "        dist[i][j] = dist[i][k] + dist[k][j]", indent: 4 },
+  { text: "        pred[i][j]  = pred[k][j]", indent: 4 },
 ];
 
-function drawPseudo(active){
-    let html="";
-    pseudoLines.forEach((l,i)=>{
-        html+=`<div class="${i===active?'active':''}">${l}</div>`;
-    });
-    document.getElementById("pseudo").innerHTML=html;
+function renderPseudo(activeLine) {
+  let html = "";
+  PSEUDO_LINES.forEach((l, i) => {
+    let cls = "pseudo-line" + (l.kw ? " kw" : "") + (i === activeLine ? " active" : "");
+    html += `<div class="${cls}">${escHtml(l.text)}</div>`;
+  });
+  document.getElementById("pseudoBlock").innerHTML = html;
 }
 
-function createMatrix(n){
-    let m=document.getElementById("matrix");
-    m.style.gridTemplateColumns=`repeat(${n},50px)`;
-    m.innerHTML="";
-    for(let i=0;i<n*n;i++){
-        let d=document.createElement("div");
-        d.className="cell";
-        m.appendChild(d);
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ─────────────────────────────────────────────
+// MATRIX RENDER
+// ─────────────────────────────────────────────
+function buildMatrixHTML(data, hl = [], upd = [], k = -1) {
+  let wrapper = document.getElementById("matrixWrapper");
+  let html = "";
+
+  // Col labels
+  html += `<div class="matrix-labels-row">`;
+  for (let j = 0; j < n; j++) html += `<div class="col-label">${j}</div>`;
+  html += `</div>`;
+
+  for (let i = 0; i < n; i++) {
+    html += `<div class="matrix-row"><div class="matrix-row-label">${i}</div>`;
+    for (let j = 0; j < n; j++) {
+      let key = `${i},${j}`;
+      let val = data[i][j];
+      let disp = val === INF ? "∞" : val;
+      let cls = "cell";
+      if (val === INF) cls += " inf";
+      if (i === j) cls += " diagonal";
+      if (upd.includes(key)) cls += " updated";
+      else if (hl.includes(key)) cls += " comparing";
+      if (k >= 0 && (i === k || j === k) && !upd.includes(key) && !hl.includes(key)) cls += " via-row";
+      html += `<div class="${cls}">${disp}</div>`;
     }
+    html += `</div>`;
+  }
+
+  wrapper.innerHTML = html;
 }
 
-function renderMatrix(data,h=[],u=[]){
-    let cells=document.querySelectorAll(".cell");
-    let n=data.length;
+// ─────────────────────────────────────────────
+// BUILD STEPS
+// ─────────────────────────────────────────────
+function buildSteps() {
+  if (graph.length === 0) { alert("Please load a preset first!"); return; }
 
-    for(let i=0;i<n;i++){
-        for(let j=0;j<n;j++){
-            let idx=i*n+j;
-            cells[idx].innerText=data[i][j]===Infinity?"∞":data[i][j];
-            cells[idx].className="cell";
+  steps = [];
+  historyLog = [];
+  comparisonsCount = 0;
+  updatesCount = 0;
+  stepIndex = 0;
 
-            if(h.includes(`${i},${j}`)) cells[idx].classList.add("compare");
-            if(u.includes(`${i},${j}`)) cells[idx].classList.add("update");
+  dist = JSON.parse(JSON.stringify(graph));
+  n = graph.length;
+
+  // Init predecessor matrix
+  pred = Array.from({length: n}, (_, i) => Array.from({length: n}, (_, j) => {
+    return (graph[i][j] !== INF && i !== j) ? i : -1;
+  }));
+
+  for (let k = 0; k < n; k++) {
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        comparisonsCount++;
+        let oldVal = dist[i][j];
+        let newVal = dist[i][k] + dist[k][j];
+        let improved = oldVal > newVal;
+
+        if (improved) {
+          dist[i][j] = newVal;
+          pred[i][j] = pred[k][j];
+          updatesCount++;
         }
+
+        let logEntry = {
+          step: comparisonsCount,
+          k, i, j,
+          oldVal: oldVal === INF ? "∞" : oldVal,
+          newVal: improved ? (newVal === INF ? "∞" : newVal) : (oldVal === INF ? "∞" : oldVal),
+          improved
+        };
+
+        steps.push({
+          mat: JSON.parse(JSON.stringify(dist)),
+          pred: JSON.parse(JSON.stringify(pred)),
+          i, j, k,
+          hl: [`${i},${j}`],
+          upd: improved ? [`${i},${j}`] : [],
+          improved,
+          oldVal, newVal,
+          comp: comparisonsCount,
+          upd_count: updatesCount
+        });
+
+        historyLog.push(logEntry);
+      }
     }
+  }
+
+  updateStepDisplay();
+  setStatus("ready", "Ready — " + steps.length + " steps");
+  buildMatrixHTML(graph, [], [], -1);
+  renderPseudo(-1);
+  updateHistoryTable([]);
 }
 
-function buildSteps(){
-    steps=[];
-    comp=0; upd=0;
+// ─────────────────────────────────────────────
+// STEP
+// ─────────────────────────────────────────────
+function stepForward() {
+  if (steps.length === 0) { buildSteps(); return; }
+  if (stepIndex >= steps.length) {
+    setStatus("done", "Complete ✓");
+    return;
+  }
 
-    dist=JSON.parse(JSON.stringify(graph));
-    let n=dist.length;
+  let s = steps[stepIndex];
+  buildMatrixHTML(s.mat, s.hl, s.upd, s.k);
+  renderPseudo(s.improved ? 4 : 3);
 
-    for(let k=0;k<n;k++){
-        for(let i=0;i<n;i++){
-            for(let j=0;j<n;j++){
+  // Explanation
+  let ik = s.k, ii = s.i, ij = s.j;
+  let old_ = s.oldVal === INF ? "∞" : s.oldVal;
+  let via_ = (s.mat[ii][ik] === INF ? "∞" : s.mat[ii][ik]);
+  // get val from BEFORE update
+  let prevMat = stepIndex > 0 ? steps[stepIndex-1].mat : graph;
+  let viaSum = prevMat[ii][ik] === INF || prevMat[ik][ij] === INF
+    ? "∞"
+    : prevMat[ii][ik] + prevMat[ik][ij];
 
-                comp++;
+  let expHtml;
+  if (s.improved) {
+    expHtml = `✅ <strong>Updated!</strong> dist[<span class="node-i highlight-num">${ii}</span>][<span class="node-j highlight-num">${ij}</span>] <br>` +
+      `&nbsp;&nbsp;Old: <strong>${old_}</strong> &nbsp;→&nbsp; Via <span class="node-k highlight-num">k=${ik}</span>: <strong>${viaSum}</strong><br>` +
+      `<span class="result-better">Path via ${ik} is shorter — matrix updated!</span>`;
+  } else {
+    expHtml = `Checking dist[<span class="node-i highlight-num">${ii}</span>][<span class="node-j highlight-num">${ij}</span>] via <span class="node-k highlight-num">k=${ik}</span><br>` +
+      `&nbsp;&nbsp;Current: <strong>${old_}</strong> &nbsp;≤&nbsp; Via k: <strong>${viaSum}</strong><br>` +
+      `<span class="result-same">No improvement — keep current value.</span>`;
+  }
+  document.getElementById("explain-box").innerHTML = expHtml;
 
-                let highlight=[`${i},${j}`];
-                let update=[];
+  document.getElementById("compCount").innerText = s.comp;
+  document.getElementById("updCount").innerText = s.upd_count;
+  document.getElementById("kDisplay").innerText = ik;
+  document.getElementById("kIndicator").innerText = `Intermediate vertex k = ${ik}`;
 
-                if(dist[i][j] > dist[i][k] + dist[k][j]){
-                    dist[i][j]=dist[i][k]+dist[k][j];
-                    upd++;
-                    update.push(`${i},${j}`);
-                }
+  updateHistoryTable(historyLog.slice(0, stepIndex + 1));
 
-                steps.push({
-                    mat:JSON.parse(JSON.stringify(dist)),
-                    i,j,k,
-                    highlight,
-                    update
-                });
-            }
-        }
+  stepIndex++;
+  updateStepDisplay();
+
+  if (stepIndex >= steps.length) {
+    setStatus("done", "Complete ✓");
+    clearInterval(animTimer);
+    populatePathSelectors();
+  }
+}
+
+// ─────────────────────────────────────────────
+// PLAY / PAUSE / RESET
+// ─────────────────────────────────────────────
+function playAnim() {
+  if (steps.length === 0) buildSteps();
+  setStatus("playing", "Playing...");
+  clearInterval(animTimer);
+  animTimer = setInterval(() => {
+    if (stepIndex >= steps.length) {
+      clearInterval(animTimer);
+      setStatus("done", "Complete ✓");
+      populatePathSelectors();
+      return;
     }
-
-    document.getElementById("stepCount").innerText=`0/${steps.length}`;
-    document.getElementById("status").innerText="Ready";
+    stepForward();
+  }, 500 / speed);
 }
 
-function step(){
-    if(stepIndex>=steps.length) return;
-
-    let s=steps[stepIndex];
-
-    renderMatrix(s.mat,s.highlight,s.update);
-
-    document.getElementById("explain").innerText=
-    `Checking if ${s.i} → ${s.j} improves via ${s.k}`;
-
-    drawPseudo(3);
-
-    stepIndex++;
-
-    document.getElementById("stepCount").innerText=
-    `${stepIndex}/${steps.length}`;
-
-    document.getElementById("comp").innerText=comp;
-    document.getElementById("upd").innerText=upd;
+function pauseAnim() {
+  clearInterval(animTimer);
+  setStatus("paused", "Paused");
 }
 
-function play(){
-    document.getElementById("status").innerText="Playing";
-    timer=setInterval(step,500/speed);
-}
-function pause(){
-    clearInterval(timer);
-    document.getElementById("status").innerText="Paused";
-}
-function reset(){
-    stepIndex=0;
-    renderMatrix(graph);
-    document.getElementById("status").innerText="Idle";
+function resetAll() {
+  clearInterval(animTimer);
+  stepIndex = 0;
+  comparisonsCount = 0;
+  updatesCount = 0;
+  document.getElementById("compCount").innerText = "0";
+  document.getElementById("updCount").innerText = "0";
+  document.getElementById("kDisplay").innerText = "—";
+  document.getElementById("kIndicator").innerText = "Select a preset to begin";
+  document.getElementById("explain-box").innerHTML = 'Click <strong>Build Steps</strong>, then <strong>Step</strong> or <strong>Play</strong>.';
+  updateStepDisplay();
+  setStatus("idle", "Idle");
+  renderPseudo(-1);
+  updateHistoryTable([]);
+  if (graph.length > 0) buildMatrixHTML(graph, [], [], -1);
+  document.getElementById("path-output").innerHTML = "Run the algorithm fully, then select nodes above.";
 }
 
-function setSpeed(v){
-    speed=v;
-    document.getElementById("speedText").innerText=v+"x";
+function setSpeed(v) {
+  speed = parseFloat(v);
+  document.getElementById("speedVal").innerText = v + "×";
 }
 
-function preset(x){
-    if(x===1){
-        graph=[
-            [0,3,Infinity,7],
-            [8,0,2,Infinity],
-            [5,Infinity,0,1],
-            [2,Infinity,Infinity,0]
-        ];
+function setStatus(type, text) {
+  let el = document.getElementById("status-display");
+  el.className = type;
+  el.innerText = text;
+}
+
+function updateStepDisplay() {
+  document.getElementById("stepDisplay").innerText = `${stepIndex}/${steps.length}`;
+}
+
+// ─────────────────────────────────────────────
+// PRESETS
+// ─────────────────────────────────────────────
+function loadPreset(x) {
+  if (x === 1) {
+    graph = [
+      [0, 3, INF, 7],
+      [8, 0,   2, INF],
+      [5, INF, 0,   1],
+      [2, INF, INF, 0]
+    ];
+  } else if (x === 2) {
+    graph = [
+      [0, 1, 4],
+      [1, 0, 2],
+      [4, 2, 0]
+    ];
+  } else if (x === 3) {
+    graph = [
+      [0,   5,  INF],
+      [INF, 0,    3],
+      [2,   INF,  0]
+    ];
+  } else if (x === 4) {
+    graph = [
+      [0,   10, INF,  5, INF],
+      [INF,  0,   1, INF, INF],
+      [INF, INF,  0, INF,  4],
+      [INF,  3, INF,  0,   2],
+      [7,  INF, INF, INF,  0]
+    ];
+  }
+  n = graph.length;
+  dist = JSON.parse(JSON.stringify(graph));
+  steps = [];
+  historyLog = [];
+  stepIndex = 0;
+  setStatus("idle", "Idle");
+  renderPseudo(-1);
+  buildMatrixHTML(graph, [], [], -1);
+  updateHistoryTable([]);
+  document.getElementById("kIndicator").innerText = `Graph loaded (${n}×${n}) — click Build Steps`;
+  populatePathSelectors();
+  document.getElementById("compCount").innerText = "0";
+  document.getElementById("updCount").innerText = "0";
+  document.getElementById("kDisplay").innerText = "—";
+  updateStepDisplay();
+}
+
+// ─────────────────────────────────────────────
+// HISTORY TABLE
+// ─────────────────────────────────────────────
+function updateHistoryTable(log) {
+  let tbody = document.getElementById("historyBody");
+  if (log.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:14px;">No steps yet.</td></tr>`;
+    return;
+  }
+  // show last 40
+  let show = log.slice(-40);
+  tbody.innerHTML = show.map(e =>
+    `<tr class="${e.improved ? 'updated-row' : 'same-row'}">
+      <td>${e.step}</td>
+      <td>${e.k}</td>
+      <td>${e.i}</td>
+      <td>${e.j}</td>
+      <td>${e.oldVal}</td>
+      <td>${e.newVal}</td>
+      <td>${e.improved ? '<span class="tag-upd">Updated</span>' : '<span class="tag-same">—</span>'}</td>
+    </tr>`
+  ).join("");
+
+  // Auto-scroll to bottom
+  let wrap = document.getElementById("historySection");
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ─────────────────────────────────────────────
+// PATH RECONSTRUCTION
+// ─────────────────────────────────────────────
+function populatePathSelectors() {
+  let from = document.getElementById("pathFrom");
+  let to = document.getElementById("pathTo");
+  from.innerHTML = "";
+  to.innerHTML = "";
+  for (let i = 0; i < n; i++) {
+    from.innerHTML += `<option value="${i}">${i}</option>`;
+    to.innerHTML += `<option value="${i}">${i}</option>`;
+  }
+  if (n > 1) to.value = "1";
+}
+
+function findPath() {
+  if (steps.length === 0 || stepIndex < steps.length) {
+    document.getElementById("path-output").innerHTML = "⚠️ Run the full algorithm first (click Play and wait for it to complete).";
+    return;
+  }
+  let src = parseInt(document.getElementById("pathFrom").value);
+  let dst = parseInt(document.getElementById("pathTo").value);
+  let finalPred = steps[steps.length - 1].pred;
+  let finalDist = steps[steps.length - 1].mat;
+
+  if (finalDist[src][dst] === INF) {
+    document.getElementById("path-output").innerHTML = `<span style="color:var(--red)">No path exists from ${src} to ${dst}.</span>`;
+    return;
+  }
+
+  // Reconstruct path
+  let path = [];
+  let cur = dst;
+  let visited = new Set();
+  while (cur !== src && cur !== -1 && !visited.has(cur)) {
+    visited.add(cur);
+    path.unshift(cur);
+    cur = finalPred[src][cur];
+  }
+  if (cur === -1) {
+    document.getElementById("path-output").innerHTML = `<span style="color:var(--red)">Path reconstruction failed.</span>`;
+    return;
+  }
+  path.unshift(src);
+
+  let dist_ = finalDist[src][dst];
+  let html = `Shortest path: `;
+  html += path.map(p => `<span class="path-node">${p}</span>`).join(`<span class="path-arrow">→</span>`);
+  html += ` &nbsp; <strong style="color:var(--green)">Distance: ${dist_}</strong>`;
+  document.getElementById("path-output").innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+// GROWTH CHART (canvas)
+// ─────────────────────────────────────────────
+function drawGrowthChart() {
+  const canvas = document.getElementById("growthChart");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.parentElement.clientWidth - 40;
+  const H = 180;
+  canvas.width = W;
+  canvas.height = H;
+
+  const pad = { top: 20, right: 20, bottom: 40, left: 60 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Data: V from 1 to 12
+  const vVals = Array.from({length: 12}, (_, i) => i + 1);
+  const ops = vVals.map(v => v * v * v);
+  const maxOps = ops[ops.length - 1];
+
+  // Background
+  ctx.fillStyle = "#0d0e0f";
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = "#22262b";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    let y = pad.top + (chartH / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(pad.left + chartW, y);
+    ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = "#2e333a";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top);
+  ctx.lineTo(pad.left, pad.top + chartH);
+  ctx.lineTo(pad.left + chartW, pad.top + chartH);
+  ctx.stroke();
+
+  // Curve
+  ctx.beginPath();
+  ctx.strokeStyle = "#e8a835";
+  ctx.lineWidth = 2.5;
+  vVals.forEach((v, idx) => {
+    let x = pad.left + (idx / (vVals.length - 1)) * chartW;
+    let y = pad.top + chartH - (ops[idx] / maxOps) * chartH;
+    if (idx === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Fill under curve
+  ctx.beginPath();
+  vVals.forEach((v, idx) => {
+    let x = pad.left + (idx / (vVals.length - 1)) * chartW;
+    let y = pad.top + chartH - (ops[idx] / maxOps) * chartH;
+    if (idx === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.lineTo(pad.left + chartW, pad.top + chartH);
+  ctx.lineTo(pad.left, pad.top + chartH);
+  ctx.closePath();
+  let grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+  grad.addColorStop(0, "rgba(232,168,53,0.18)");
+  grad.addColorStop(1, "rgba(232,168,53,0)");
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // X labels
+  ctx.fillStyle = "#7a8491";
+  ctx.font = "11px JetBrains Mono, monospace";
+  ctx.textAlign = "center";
+  vVals.forEach((v, idx) => {
+    if (v % 2 === 0 || v === 1) {
+      let x = pad.left + (idx / (vVals.length - 1)) * chartW;
+      ctx.fillText(v, x, pad.top + chartH + 16);
     }
-    if(x===2){
-        graph=[
-            [0,1,4],
-            [1,0,2],
-            [4,2,0]
-        ];
-    }
-    if(x===3){
-        graph=[
-            [0,5,Infinity],
-            [Infinity,0,3],
-            [2,Infinity,0]
-        ];
-    }
+  });
 
-    createMatrix(graph.length);
-    renderMatrix(graph);
-    reset();
+  // Y label
+  ctx.save();
+  ctx.translate(14, pad.top + chartH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center";
+  ctx.fillText("Operations", 0, 0);
+  ctx.restore();
+
+  // X axis label
+  ctx.textAlign = "center";
+  ctx.fillText("V (vertices)", pad.left + chartW / 2, H - 4);
+
+  // Current V marker
+  if (n > 0 && n <= 12) {
+    let idx = n - 1;
+    let x = pad.left + (idx / (vVals.length - 1)) * chartW;
+    let y = pad.top + chartH - (ops[idx] / maxOps) * chartH;
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#34c98a";
+    ctx.fill();
+    ctx.fillStyle = "#edeef0";
+    ctx.font = "bold 11px JetBrains Mono, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(`V=${n} → ${n}³=${n*n*n}`, x, y - 12);
+  }
 }
 
+// ─────────────────────────────────────────────
+// CUSTOM GRAPH
+// ─────────────────────────────────────────────
+function buildCustomEdges() {
+  let N = parseInt(document.getElementById("customN").value);
+  if (N < 2 || N > 6) { document.getElementById("customMsg").innerText = "N must be 2–6."; return; }
+  let container = document.getElementById("customEdgeInputs");
+  container.innerHTML = "";
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      let row = document.createElement("div");
+      row.className = "custom-row";
+      row.innerHTML = `<label>dist[${i}][${j}]</label>
+        <input id="e_${i}_${j}" type="text" value="${i === j ? '0' : '∞'}" placeholder="∞ or number">`;
+      container.appendChild(row);
+    }
+  }
+  document.getElementById("customMsg").innerText = "Enter edge weights (∞ for no direct edge).";
+}
+
+function applyCustomGraph() {
+  let N = parseInt(document.getElementById("customN").value);
+  let newGraph = [];
+  for (let i = 0; i < N; i++) {
+    newGraph.push([]);
+    for (let j = 0; j < N; j++) {
+      let el = document.getElementById(`e_${i}_${j}`);
+      if (!el) { document.getElementById("customMsg").innerText = "Generate edge inputs first."; return; }
+      let val = el.value.trim();
+      if (val === "∞" || val === "" || val === "inf" || val === "Infinity") {
+        newGraph[i].push(INF);
+      } else {
+        let num = parseFloat(val);
+        if (isNaN(num)) { document.getElementById("customMsg").innerText = `Invalid value at [${i}][${j}].`; return; }
+        newGraph[i].push(num);
+      }
+    }
+  }
+  graph = newGraph;
+  n = N;
+  dist = JSON.parse(JSON.stringify(graph));
+  steps = [];
+  historyLog = [];
+  stepIndex = 0;
+  setStatus("idle", "Idle");
+  renderPseudo(-1);
+  buildMatrixHTML(graph, [], [], -1);
+  updateHistoryTable([]);
+  populatePathSelectors();
+  drawGrowthChart();
+  document.getElementById("customMsg").innerText = "✅ Custom graph applied!";
+  document.getElementById("kIndicator").innerText = `Custom graph (${n}×${n}) — click Build Steps`;
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+renderPseudo(-1);
+drawGrowthChart();
+loadPreset(1);
+drawGrowthChart();
+
+window.addEventListener("resize", drawGrowthChart);
 </script>
 
 </body>
