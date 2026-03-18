@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Floyd-Warshall Visualizer</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #121212;
+    color: white;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.left {
+    width: 420px;
+    padding: 15px;
+    background: #1e1e1e;
+    overflow-y: auto;
+}
+
+.right {
+    flex: 1;
+    padding: 15px;
+}
+
+button {
+    margin: 5px;
+    padding: 8px;
+    background: #333;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #555;
+}
+
+.matrix {
+    display: grid;
+    gap: 5px;
+}
+
+.cell {
+    width: 50px;
+    height: 50px;
+    background: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    transition: 0.3s;
+}
+
+.highlight {
+    background: red;
+}
+
+.updated {
+    background: green;
+}
+
+.pseudo {
+    background: #000;
+    padding: 10px;
+    font-family: monospace;
+}
+
+.active-line {
+    background: #444;
+}
+
+.legend div {
+    margin: 5px 0;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="left">
+
+<h2>Controls</h2>
+
+<button onclick="buildSteps()">Build Steps</button>
+<button onclick="step()">Step</button>
+<button onclick="play()">Play</button>
+<button onclick="pause()">Pause</button>
+<button onclick="reset()">Reset</button>
+
+<br><br>
+
+Speed:
+<input type="range" min="0.25" max="4" step="0.25" value="1" onchange="setSpeed(this.value)">
+<span id="speedVal">1x</span>
+
+<br><br>
+
+Step: <span id="stepCounter">0 / 0</span>
+<br>Status: <span id="status">Idle</span>
+
+<h3>Presets</h3>
+<button onclick="loadPreset(1)">Example 1</button>
+<button onclick="loadPreset(2)">Example 2</button>
+<button onclick="loadPreset(3)">Example 3</button>
+
+<h3>Pseudocode</h3>
+<div class="pseudo" id="pseudo"></div>
+
+<h3>Explanation</h3>
+<div id="explanation"></div>
+
+<h3>Statistics</h3>
+Comparisons: <span id="comp">0</span><br>
+Updates: <span id="updates">0</span>
+
+<h3>Legend</h3>
+<div class="legend">
+<div>🔴 Comparing</div>
+<div>🟢 Updated</div>
+</div>
+
+</div>
+
+<div class="right">
+<h2>Distance Matrix</h2>
+<div id="matrix" class="matrix"></div>
+</div>
+
+</div>
+
+<script>
+
+let graph = [];
+let dist = [];
+let steps = [];
+let currentStep = 0;
+let speed = 1;
+let interval;
+let comparisons = 0;
+let updates = 0;
+
+const pseudoCode = [
+"for k = 1 to V",
+"  for i = 1 to V",
+"    for j = 1 to V",
+"      if dist[i][j] > dist[i][k] + dist[k][j]",
+"         dist[i][j] = dist[i][k] + dist[k][j]"
+];
+
+function renderPseudo(active) {
+    let html = "";
+    pseudoCode.forEach((line, i) => {
+        html += `<div class="${i===active?'active-line':''}">${i+1}. ${line}</div>`;
+    });
+    document.getElementById("pseudo").innerHTML = html;
+}
+
+function createMatrix(n) {
+    const matrix = document.getElementById("matrix");
+    matrix.style.gridTemplateColumns = `repeat(${n}, 50px)`;
+    matrix.innerHTML = "";
+
+    for (let i = 0; i < n*n; i++) {
+        let div = document.createElement("div");
+        div.className = "cell";
+        matrix.appendChild(div);
+    }
+}
+
+function renderMatrix(data, highlight=[], updated=[]) {
+    const cells = document.querySelectorAll(".cell");
+    let n = data.length;
+
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+            let idx = i*n + j;
+            cells[idx].innerText = data[i][j] === Infinity ? "∞" : data[i][j];
+            cells[idx].className = "cell";
+
+            if (highlight.includes(`${i},${j}`))
+                cells[idx].classList.add("highlight");
+
+            if (updated.includes(`${i},${j}`))
+                cells[idx].classList.add("updated");
+        }
+    }
+}
+
+function buildSteps() {
+    steps = [];
+    comparisons = 0;
+    updates = 0;
+
+    let n = graph.length;
+    dist = JSON.parse(JSON.stringify(graph));
+
+    for (let k = 0; k < n; k++) {
+        for (let i = 0; i < n; i++) {
+            for (let j = 0; j < n; j++) {
+
+                comparisons++;
+
+                let highlight = [`${i},${j}`];
+                let updated = [];
+
+                if (dist[i][j] > dist[i][k] + dist[k][j]) {
+                    dist[i][j] = dist[i][k] + dist[k][j];
+                    updates++;
+                    updated.push(`${i},${j}`);
+                }
+
+                steps.push({
+                    matrix: JSON.parse(JSON.stringify(dist)),
+                    i,j,k,
+                    highlight,
+                    updated
+                });
+            }
+        }
+    }
+
+    document.getElementById("stepCounter").innerText = `0 / ${steps.length}`;
+    document.getElementById("status").innerText = "Ready";
+}
+
+function step() {
+    if (currentStep >= steps.length) return;
+
+    let s = steps[currentStep];
+
+    renderMatrix(s.matrix, s.highlight, s.updated);
+
+    document.getElementById("explanation").innerText =
+        `Checking if path ${s.i} → ${s.j} improves via ${s.k}`;
+
+    renderPseudo(3);
+
+    currentStep++;
+    document.getElementById("stepCounter").innerText =
+        `${currentStep} / ${steps.length}`;
+
+    document.getElementById("comp").innerText = comparisons;
+    document.getElementById("updates").innerText = updates;
+}
+
+function play() {
+    document.getElementById("status").innerText = "Playing";
+    interval = setInterval(step, 500 / speed);
+}
+
+function pause() {
+    clearInterval(interval);
+    document.getElementById("status").innerText = "Paused";
+}
+
+function reset() {
+    currentStep = 0;
+    renderMatrix(graph);
+    document.getElementById("status").innerText = "Idle";
+}
+
+function setSpeed(val) {
+    speed = val;
+    document.getElementById("speedVal").innerText = val + "x";
+}
+
+function loadPreset(x) {
+    if (x === 1) {
+        graph = [
+            [0, 3, Infinity, 7],
+            [8, 0, 2, Infinity],
+            [5, Infinity, 0, 1],
+            [2, Infinity, Infinity, 0]
+        ];
+    }
+    if (x === 2) {
+        graph = [
+            [0, 1, 4],
+            [1, 0, 2],
+            [4, 2, 0]
+        ];
+    }
+    if (x === 3) {
+        graph = [
+            [0, 5, Infinity],
+            [Infinity, 0, 3],
+            [2, Infinity, 0]
+        ];
+    }
+
+    createMatrix(graph.length);
+    renderMatrix(graph);
+    reset();
+}
+
+</script>
+
+</body>
+</html>
