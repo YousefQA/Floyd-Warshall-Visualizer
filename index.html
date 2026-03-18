@@ -179,6 +179,8 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
 .hist-scroll tr.r-cur td{background:rgba(251,191,36,.05);color:#fbbf24;font-weight:700;}
 .tag-upd{background:#021a0d;border:1px solid #166534;border-radius:3px;padding:1px 5px;font-size:9px;color:#4ade80;}
 .tag-same{background:#0f1117;border:1px solid #1a1f35;border-radius:3px;padding:1px 5px;font-size:9px;color:#252a3f;}
+.tag-diag{background:#0c1535;border:1px solid #1d4ed8;border-radius:3px;padding:1px 5px;font-size:9px;color:#3b82f6;}
+.hist-scroll tr.r-diag td{color:#1d4ed8;}
 
 /* ─── ALL-PAIRS OUTPUT ──────────────────────────── */
 .pair-list{display:flex;flex-direction:column;gap:5px;}
@@ -325,6 +327,8 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
           <marker id="ap" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
           <marker id="an" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
           <marker id="ak" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#22c55e"/></marker>
+          <marker id="ag" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4ade80"/></marker>
+          <marker id="ay" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#fbbf24"/></marker>
         </defs>
         <g id="edgeLayer"></g>
         <g id="nodeLayer"></g>
@@ -397,7 +401,7 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
 const INF=Infinity;
 const LETTERS=['A','B','C','D'];
 const L=i=>(i>=0&&i<LETTERS.length)?LETTERS[i]:'—';
-let graph=[],steps=[],histLog=[];
+let graph=[],graphDisp=[],steps=[],histLog=[];
 let stepIdx=0,speed=1,timer=null,n=0;
 
 /* ── PSEUDOCODE ── */
@@ -481,6 +485,7 @@ function randomize(){
       graph[i][t[Math.floor(Math.random()*t.length)]]=Math.floor(Math.random()*22)-2;
     }
   }
+  graphDisp=JSON.parse(JSON.stringify(graph));
   fullReset(false);
   drawDist(graph,[],[],-1);
   drawPred(initPred(graph),[],[]);
@@ -491,7 +496,7 @@ function randomize(){
 /* ── RESET ── */
 function fullReset(clearG){
   clearInterval(timer);timer=null;
-  if(clearG){graph=[];n=0;}
+  if(clearG){graph=[];graphDisp=[];n=0;}
   steps=[];histLog=[];stepIdx=0;
   setSt("idle","Idle");renderPseudoIdle();
   const cw=document.getElementById("cycleWarning");
@@ -514,23 +519,28 @@ function buildSteps(){
   steps=[];histLog=[];stepIdx=0;
   let M=JSON.parse(JSON.stringify(graph)),T=initPred(graph),comp=0,upd=0;
   for(let k=0;k<n;k++)for(let i=0;i<n;i++)for(let j=0;j<n;j++){
-    if(i===j)continue;
+    if(i===j){
+      // Diagonal: always 0, never updated — include in history for completeness
+      histLog.push({idx:histLog.length,k,i,j,oldD:"0",newD:"0",oldT:"—",newT:"—",better:false,diag:true});
+      continue;
+    }
     comp++;
     const oldD=M[i][j],oldT=T[i][j];
     const via=(M[i][k]===INF||M[k][j]===INF)?INF:M[i][k]+M[k][j];
     const better=via!==INF&&via<oldD;
     if(better){M[i][j]=via;T[i][j]=(T[k][j]!==-1)?T[k][j]:k;upd++;}
     const newD=M[i][j],newT=T[i][j];
-    if(better){
-      steps.push({M:JSON.parse(JSON.stringify(M)),T:JSON.parse(JSON.stringify(T)),i,j,k,hlD:[`${i},${j}`],updD:[`${i},${j}`],hlP:[`${i},${j}`],updP:[],stepType:4,oldD,newD,via,oldT,newT,comp,upd_n:upd,histIdx:comp-1});
-      steps.push({M:JSON.parse(JSON.stringify(M)),T:JSON.parse(JSON.stringify(T)),i,j,k,hlD:[`${i},${j}`],updD:[],hlP:[`${i},${j}`],updP:[`${i},${j}`],stepType:5,oldD,newD,via,oldT,newT,comp,upd_n:upd,histIdx:comp-1});
-    }else{
-      steps.push({M:JSON.parse(JSON.stringify(M)),T:JSON.parse(JSON.stringify(T)),i,j,k,hlD:[`${i},${j}`],updD:[],hlP:[`${i},${j}`],updP:[],stepType:3,oldD,newD:oldD,via,oldT,newT:oldT,comp,upd_n:upd,histIdx:comp-1});
-    }
-    histLog.push({idx:comp-1,k,i,j,
+    const hIdx=histLog.length;
+    histLog.push({idx:hIdx,k,i,j,
       oldD:oldD===INF?"∞":oldD,
       newD:better?(via===INF?"∞":via):(oldD===INF?"∞":oldD),
-      oldT:oldT===-1?"—":L(oldT),newT:newT===-1?"—":L(newT),better});
+      oldT:oldT===-1?"—":L(oldT),newT:newT===-1?"—":L(newT),better,diag:false});
+    if(better){
+      steps.push({M:JSON.parse(JSON.stringify(M)),T:JSON.parse(JSON.stringify(T)),i,j,k,hlD:[`${i},${j}`],updD:[`${i},${j}`],hlP:[`${i},${j}`],updP:[],stepType:4,oldD,newD,via,oldT,newT,comp,upd_n:upd,histIdx:hIdx});
+      steps.push({M:JSON.parse(JSON.stringify(M)),T:JSON.parse(JSON.stringify(T)),i,j,k,hlD:[`${i},${j}`],updD:[],hlP:[`${i},${j}`],updP:[`${i},${j}`],stepType:5,oldD,newD,via,oldT,newT,comp,upd_n:upd,histIdx:hIdx});
+    }else{
+      steps.push({M:JSON.parse(JSON.stringify(M)),T:JSON.parse(JSON.stringify(T)),i,j,k,hlD:[`${i},${j}`],updD:[],hlP:[`${i},${j}`],updP:[],stepType:3,oldD,newD:oldD,via,oldT,newT:oldT,comp,upd_n:upd,histIdx:hIdx});
+    }
   }
   const fm=steps.length?steps[steps.length-1].M:M;
   const neg=[];
@@ -538,6 +548,7 @@ function buildSteps(){
   const cw=document.getElementById("cycleWarning");
   if(neg.length){cw.style.display="block";cw.innerHTML=`⚠️ <strong>Negative cycle at node(s): ${neg.join(", ")}</strong> — results unreliable. Randomize a new graph.`;}
   else cw.style.display="none";
+  graphDisp=JSON.parse(JSON.stringify(graph));
   clearHist();renderFullHist();
   drawDist(graph,[],[],-1);drawPred(initPred(graph),[],[]);
   renderPseudoIdle();
@@ -550,7 +561,11 @@ function buildSteps(){
 /* ── RENDER STEP ── */
 function renderStep(idx){
   const s=steps[idx];
-  drawDist(s.M,s.hlD,s.updD,s.k);
+  // Update the graph display matrix when a distance is improved
+  if(s.stepType===4){graphDisp[s.i][s.j]=s.newD;}
+  // On pred-update step, keep the edge green (dist was updated on previous step)
+  const graphUpdEdges=s.stepType===5?s.hlD:s.updD;
+  drawDist(s.M,s.hlD,graphUpdEdges,s.k,s.i,s.j);
   drawPred(s.T,s.hlP,s.updP,s.k);
   renderPseudo(s.stepType,s);
   const ii=L(s.i),ij=L(s.j),ik=L(s.k);
@@ -595,6 +610,8 @@ function stepBack(){
   if(stepIdx<=0)return;
   clearInterval(timer);timer=null;setSt("paused","Paused");
   stepIdx--;
+  graphDisp=JSON.parse(JSON.stringify(graph));
+  for(let ri=0;ri<stepIdx;ri++){const rs=steps[ri];if(rs.stepType===4)graphDisp[rs.i][rs.j]=rs.newD;}
   if(stepIdx===0){
     drawDist(graph,[],[],-1);drawPred(initPred(graph),[],[]);renderPseudoIdle();
     const m="Back to start. Press <strong>Step ▶</strong> or <strong>▶ Play</strong>.";
@@ -616,6 +633,7 @@ function playAnim(){
 function stopAnim(){clearInterval(timer);timer=null;setSt("paused","Stopped");updateBtns();}
 function restartAnim(){
   clearInterval(timer);timer=null;stepIdx=0;
+  graphDisp=JSON.parse(JSON.stringify(graph));
   if(graph.length){drawDist(graph,[],[],-1);drawPred(initPred(graph),[],[]);}
   renderPseudoIdle();clearHist();renderFullHist();clearHistHL();
   const m="Restarted. Press <strong>▶ Play</strong> or <strong>Step ▶</strong>.";
@@ -682,8 +700,8 @@ function renderOutput(){
 }
 
 /* ── DRAW MATRICES ── */
-function drawDist(M,hl=[],upd=[],k=-1){
-  updateGraphSvg(graph,k);
+function drawDist(M,hl=[],upd=[],k=-1,curI=-1,curJ=-1){
+  updateGraphSvg(graphDisp,k,hl,upd,curI,curJ);
   let h=`<div class="m-labels-row">`+Array.from({length:n},(_,j)=>`<div class="m-col-lbl">${LETTERS[j]}</div>`).join("")+`</div>`;
   for(let i=0;i<n;i++){
     h+=`<div class="m-row"><div class="m-row-lbl">${LETTERS[i]}</div>`;
@@ -788,7 +806,7 @@ function geom(i,j){
   return{pd,lx,ly};
 }
 
-function updateGraphSvg(M,k){
+function updateGraphSvg(M,k,hlEdges=[],updEdges=[],curI=-1,curJ=-1){
   if(!M||M.length!==4)return;
   const el=document.getElementById("edgeLayer"),nl=document.getElementById("nodeLayer");
   if(!el||!nl)return;
@@ -816,21 +834,32 @@ function updateGraphSvg(M,k){
 
   for(let i=0;i<4;i++)for(let j=0;j<4;j++){
     if(i===j)continue;
-    const v=M[i][j];if(v===INF)continue;
-    const neg=v<0,isK=k>=0&&(i===k||j===k);
-    const col=isK?"#22c55e":(neg?"#a78bfa":"#f59e0b");
-    const mk=isK?"url(#ak)":(neg?"url(#an)":"url(#ap)");
+    // Only draw edges that exist in the original graph structure
+    const origV=graph[i][j];
+    if(origV===INF)continue;
+    const v=M[i][j]!==INF?M[i][j]:origV; // show updated dist if available, else original
+    // Hide edge when value is 0, INF, or null — arrow disappears to signal no valid path
+    if(v===0||v===INF||v===null||v===undefined)continue;
+    const key=`${i},${j}`;
+    const isUpd=updEdges.includes(key);
+    const isCmp=!isUpd&&hlEdges.includes(key);
+    const neg=v<0, isK=k>=0&&(i===k||j===k);
+
+    // Color priority: updated > compared > bridge-k > negative > default
+    const col=isUpd?"#4ade80":isCmp?"#fbbf24":isK?"#22c55e":(neg?"#a78bfa":"#f59e0b");
+    const mk=isUpd?"url(#ag)":isCmp?"url(#ay)":isK?"url(#ak)":neg?"url(#an)":"url(#ap)";
+    const sw=isUpd?"2.8":isCmp?"2.2":isK?"2.2":"1.6";
     const{pd,lx,ly}=geom(i,j);
 
     // Draw the edge path
     const p=document.createElementNS(ns,"path");
     p.setAttribute("d",pd);p.setAttribute("fill","none");
-    p.setAttribute("stroke",col);p.setAttribute("stroke-width",isK?"2.2":"1.6");
+    p.setAttribute("stroke",col);p.setAttribute("stroke-width",sw);
     p.setAttribute("marker-end",mk);
     el.appendChild(p);
 
-    // Draw weight label pill — fill matches SVG node background so it looks native
-    const lt=String(v);
+    // Label pill background
+    const lt=v===INF?"∞":String(v);
     const charW=8;
     const bw=Math.max(lt.length*charW+12,24);
     const bh=18;
@@ -838,10 +867,12 @@ function updateGraphSvg(M,k){
     bg.setAttribute("x",(lx-bw/2).toFixed(1));
     bg.setAttribute("y",(ly-bh/2).toFixed(1));
     bg.setAttribute("width",bw);bg.setAttribute("height",bh);bg.setAttribute("rx","4");
-    bg.setAttribute("fill","#0d1017");bg.setAttribute("stroke",col);bg.setAttribute("stroke-width","1.5");
+    // Updated edge: green pill bg; compared: amber tint; else dark
+    const pillFill=isUpd?"#021a0d":isCmp?"#1c0a00":"#0d1017";
+    bg.setAttribute("fill",pillFill);bg.setAttribute("stroke",col);bg.setAttribute("stroke-width","1.5");
     el.appendChild(bg);
 
-    // Label text on top
+    // Label text
     const tx=document.createElementNS(ns,"text");
     tx.setAttribute("x",lx.toFixed(1));
     tx.setAttribute("y",(ly+4.5).toFixed(1));
@@ -860,13 +891,17 @@ function updateGraphSvg(M,k){
 /* ── HISTORY ── */
 function renderFullHist(){
   if(!histLog.length){clearHist();return;}
-  document.getElementById("histBody").innerHTML=histLog.map(e=>
-    `<tr id="hr_${e.idx}" class="${e.better?'r-upd':'r-same'}">
+  document.getElementById("histBody").innerHTML=histLog.map(e=>{
+    const rowCls=e.diag?'r-diag':e.better?'r-upd':'r-same';
+    const tag=e.diag
+      ?'<span class="tag-diag">diag</span>'
+      :e.better?'<span class="tag-upd">✔ Updated</span>':'<span class="tag-same">—</span>';
+    return `<tr id="hr_${e.idx}" class="${rowCls}">
       <td>${e.idx+1}</td><td>${L(e.k)}</td><td>${L(e.i)}</td><td>${L(e.j)}</td>
       <td>${e.oldD}</td><td>${e.newD}</td><td>${e.oldT}</td><td>${e.newT}</td>
-      <td>${e.better?'<span class="tag-upd">✔ Updated</span>':'<span class="tag-same">—</span>'}</td>
-    </tr>`
-  ).join("");
+      <td>${tag}</td>
+    </tr>`;
+  }).join("");
 }
 function clearHist(){
   document.getElementById("histBody").innerHTML=
