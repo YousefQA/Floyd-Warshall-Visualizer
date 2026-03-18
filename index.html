@@ -203,8 +203,7 @@
       </div>
       <div class="btn-row" style="margin-top:8px;">
         <button onclick="playAnim()" id="btnPlay" disabled>▶ Play</button>
-        <button onclick="pauseAnim()" id="btnPause" disabled>⏸ Pause</button>
-        <button class="stop-btn" onclick="stopAnim()" id="btnStop" disabled>■ Stop</button>
+        <button class="stop-btn" onclick="pauseOrRestart()" id="btnPauseRestart" disabled>⏸ Pause</button>
         <button class="danger" onclick="resetAll()" id="btnReset">↺ Reset</button>
       </div>
       <div class="speed-row">
@@ -327,34 +326,58 @@ let currentSize = 3;
 let n = 0;
 const INF = Infinity;
 
-// ── PSEUDOCODE LINES ───────────────────────────────────────────────────────
-// stepType: -1=idle, 0=k-loop, 1=i-loop, 2=j-loop, 3=check(no update), 4=update
+// ── PSEUDOCODE ─────────────────────────────────────────────────────────────
+// lineIndex: which single line to highlight (-1 = none)
+// stepType → lineIndex mapping:
+//   "idle" (-1) → no highlight
+//   "check_no_update" (3) → line 3 (the if-condition)
+//   "check_update"    (4) → line 4 (dist assignment)
+//   "pred_update"     (5) → line 5 (pred assignment)
 const PSEUDO = [
-  { text: "for k = 0 to V−1:",                              color: "#ff7b72", types: [0,1,2,3,4] },
-  { text: "  for i = 0 to V−1:",                            color: "#ff7b72", types: [1,2,3,4] },
-  { text: "    for j = 0 to V−1:",                          color: "#ff7b72", types: [2,3,4] },
-  { text: "      ┌ if dist[i][k] + dist[k][j]",             color: "#e8a835", types: [3,4] },
-  { text: "      └   < dist[i][j]:  ← is via-k shorter?",   color: "#e8a835", types: [3,4] },
-  { text: "          dist[i][j] = dist[i][k] + dist[k][j]", color: "#34c98a", types: [4] },
-  { text: "          pred[i][j] = pred[k][j]",              color: "#34c98a", types: [4] },
+  { text: "for k = 0 to V−1:",                              color: "#ff7b72" },  // line 0
+  { text: "  for i = 0 to V−1:",                            color: "#ff7b72" },  // line 1
+  { text: "    for j = 0 to V−1:",                          color: "#ff7b72" },  // line 2
+  { text: "      if dist[i][k] + dist[k][j] < dist[i][j]:", color: "#e8a835" },  // line 3
+  { text: "        dist[i][j] = dist[i][k] + dist[k][j]",   color: "#34c98a" },  // line 4
+  { text: "        pred[i][j] = pred[k][j]",                color: "#34c98a" },  // line 5
 ];
 
-const CAPTIONS = {
-  "-1": "Click <strong style='color:var(--text)'>Build Steps</strong> to compile all steps, then walk through them one by one.",
-  "0":  "<strong style='color:#ff7b72'>k-loop:</strong> We try every node as a possible 'bridge'. Right now k = the highlighted row/column. Every path i→j will be tested against going i→k→j.",
-  "1":  "<strong style='color:#ff7b72'>i-loop:</strong> We pick a starting node <strong style='color:#e05c5c'>i</strong>. We will test all paths that start here.",
-  "2":  "<strong style='color:#ff7b72'>j-loop:</strong> We pick a destination node <strong style='color:#34c98a'>j</strong>. Now we ask: is i→k→j shorter than the current direct dist[i][j]?",
-  "3":  "<strong style='color:#e8a835'>Condition check — no update:</strong> The path through k is NOT shorter (or equal). We keep the current dist[i][j] unchanged.",
-  "4":  "<strong style='color:#34c98a'>✅ Update! Shorter path found:</strong> Going i→k→j beats the current route. We write the new shorter distance into dist[i][j].",
-};
+// stepType (stored per step) → which single line index to highlight
+const STEP_TO_LINE = { 3: 3, 4: 4 };
 
-function renderPseudo(stepType) {
-  const t = stepType;
-  document.getElementById("pseudoBlock").innerHTML = PSEUDO.map(l => {
-    const active = l.types.includes(t) && t !== -1;
+// Caption that appears below pseudocode — changes per active line
+function captionForStep(s) {
+  if (!s) return `Click <strong style='color:var(--text)'>Build Steps</strong> — each line will highlight exactly when it executes.`;
+  const ii = s.i, ij = s.j, ik = s.k;
+  const od = s.oldVal === INF ? "∞" : s.oldVal;
+  const vd = s.viaVal === INF ? "∞" : s.viaVal;
+  const nd = s.newVal === INF ? "∞" : s.newVal;
+
+  if (s.stepType === 3) {
+    return `<strong style='color:#e8a835'>→ Line 4 running:</strong> Checking if <code>dist[${ii}][${ik}] + dist[${ik}][${ij}]</code> = <strong>${vd}</strong> is less than <code>dist[${ii}][${ij}]</code> = <strong>${od}</strong>.<br>
+            Result: <strong style='color:#e05c5c'>FALSE</strong> — ${vd} is not less than ${od}. No update needed.`;
+  }
+  if (s.stepType === 4) {
+    return `<strong style='color:#34c98a'>→ Line 5 running:</strong> Condition was <strong style='color:#34c98a'>TRUE</strong>! Writing new shorter distance.<br>
+            <code>dist[${ii}][${ij}]</code> = ${od} is replaced with <strong style='color:#34c98a'>${nd}</strong> (via node k=${ik}).`;
+  }
+  return `Click <strong style='color:var(--text)'>Build Steps</strong> — each line will highlight exactly when it executes.`;
+}
+
+function renderPseudo(stepType, stepData) {
+  const activeLine = (stepType !== undefined && stepType !== -1) ? (STEP_TO_LINE[stepType] ?? -1) : -1;
+  document.getElementById("pseudoBlock").innerHTML = PSEUDO.map((l, idx) => {
+    const active = idx === activeLine;
     return `<div class="pseudo-line${active ? ' active' : ''}" style="${active ? '' : 'color:' + l.color}">${escHtml(l.text)}</div>`;
   }).join("");
-  document.getElementById("pseudoCaption").innerHTML = CAPTIONS[String(t)] || CAPTIONS["-1"];
+  document.getElementById("pseudoCaption").innerHTML = captionForStep(stepData);
+}
+
+function renderPseudoIdle() {
+  document.getElementById("pseudoBlock").innerHTML = PSEUDO.map(l =>
+    `<div class="pseudo-line" style="color:${l.color}">${escHtml(l.text)}</div>`
+  ).join("");
+  document.getElementById("pseudoCaption").innerHTML = `Click <strong style='color:var(--text)'>Build Steps</strong> — each line will highlight exactly when it executes.`;
 }
 
 function escHtml(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -392,7 +415,7 @@ function fullReset(clearGraph) {
   if (clearGraph) { graph = []; n = 0; }
   steps = []; historyLog = []; stepIndex = 0;
   setStatus("idle","Idle");
-  renderPseudo(-1);
+  renderPseudoIdle();
   clearHistoryTable();
   document.getElementById("compCount").innerText  = "0";
   document.getElementById("updCount").innerText   = "0";
@@ -444,7 +467,7 @@ function buildSteps() {
 
   renderFullHistory();
   buildMatrixHTML(graph,[],[],-1);
-  renderPseudo(-1);
+  renderPseudoIdle();
   setStatus("ready","Ready — "+steps.length+" steps");
   document.getElementById("explain-box").innerHTML =
     `<strong>${steps.length} steps compiled.</strong><br>Use <strong>◀ Back</strong> / <strong>Step ▶</strong> to go step by step.<br>Use <strong>▶ Play</strong> to animate. Steps stay visible in the history table below.`;
@@ -456,7 +479,7 @@ function buildSteps() {
 function renderStep(idx) {
   const s = steps[idx];
   buildMatrixHTML(s.mat, s.hl, s.upd, s.k);
-  renderPseudo(s.stepType);
+  renderPseudo(s.stepType, s);   // ← pass full step so caption shows real numbers
 
   const ii=s.i, ij=s.j, ik=s.k;
   const od = s.oldVal===INF?"∞":s.oldVal;
@@ -501,7 +524,7 @@ function stepBack() {
   stepIndex--;
   if (stepIndex === 0) {
     buildMatrixHTML(graph,[],[],-1);
-    renderPseudo(-1);
+    renderPseudoIdle();
     document.getElementById("explain-box").innerHTML = "Stepped back to the beginning. Press <strong>Step ▶</strong> to go forward.";
     document.getElementById("compCount").innerText = "0";
     document.getElementById("updCount").innerText  = "0";
@@ -516,10 +539,11 @@ function stepBack() {
   updateBtns();
 }
 
-// ── PLAY / PAUSE / STOP ───────────────────────────────────────────────────
+// ── PLAY / PAUSE+RESTART ──────────────────────────────────────────────────
 function playAnim() {
   if (!steps.length) buildSteps();
   setStatus("playing","Playing..."); clearInterval(animTimer);
+  document.getElementById("btnPauseRestart").innerText = "⏸ Pause";
   animTimer = setInterval(()=>{
     if (stepIndex>=steps.length) { clearInterval(animTimer); setStatus("done","Complete ✓"); populatePathSelectors(); updateBtns(); return; }
     stepForward();
@@ -527,22 +551,31 @@ function playAnim() {
   updateBtns();
 }
 
-function pauseAnim() { clearInterval(animTimer); setStatus("paused","Paused"); updateBtns(); }
-
-function stopAnim() {
-  clearInterval(animTimer);
-  stepIndex = 0;
-  setStatus("stopped","Stopped");
-  buildMatrixHTML(graph,[],[],-1);
-  renderPseudo(-1);
-  document.getElementById("explain-box").innerHTML = "Stopped. Press <strong>Step ▶</strong> or <strong>▶ Play</strong> to restart from beginning.";
-  document.getElementById("compCount").innerText = "0";
-  document.getElementById("updCount").innerText  = "0";
-  document.getElementById("kDisplay").innerText  = "—";
-  document.getElementById("kIndicator").innerText = `Random ${n}×${n} — step through`;
-  clearHistoryHighlight();
-  updateStepDisplay();
-  updateBtns();
+// Single button: if playing → pause; if paused/stopped → restart from beginning
+function pauseOrRestart() {
+  if (animTimer) {
+    // Currently playing — pause it
+    clearInterval(animTimer);
+    animTimer = null;
+    setStatus("paused","Paused");
+    document.getElementById("btnPauseRestart").innerText = "↺ Restart";
+    updateBtns();
+  } else {
+    // Currently paused — restart from step 0
+    stepIndex = 0;
+    buildMatrixHTML(graph,[],[],-1);
+    renderPseudoIdle();
+    document.getElementById("explain-box").innerHTML = "Restarted. Press <strong>▶ Play</strong> or <strong>Step ▶</strong> to go forward.";
+    document.getElementById("compCount").innerText = "0";
+    document.getElementById("updCount").innerText  = "0";
+    document.getElementById("kDisplay").innerText  = "—";
+    document.getElementById("kIndicator").innerText = `Random ${n}×${n} — stepped back to start`;
+    document.getElementById("btnPauseRestart").innerText = "⏸ Pause";
+    clearHistoryHighlight();
+    setStatus("ready","Ready — press Play");
+    updateStepDisplay();
+    updateBtns();
+  }
 }
 
 function setSpeed(v) { speed=parseFloat(v); document.getElementById("speedVal").innerText=v+"×"; }
@@ -550,11 +583,15 @@ function setStatus(t,txt) { const el=document.getElementById("status-display"); 
 function updateStepDisplay() { document.getElementById("stepDisplay").innerText=`${stepIndex}/${steps.length}`; }
 function updateBtns() {
   const built=steps.length>0, atStart=stepIndex===0, atEnd=stepIndex>=steps.length;
-  document.getElementById("btnBack").disabled  = !built||atStart;
-  document.getElementById("btnStep").disabled  = !built||atEnd;
-  document.getElementById("btnPlay").disabled  = !built||atEnd;
-  document.getElementById("btnPause").disabled = !built;
-  document.getElementById("btnStop").disabled  = !built;
+  const playing = !!animTimer;
+  document.getElementById("btnBack").disabled         = !built||atStart;
+  document.getElementById("btnStep").disabled         = !built||atEnd||playing;
+  document.getElementById("btnPlay").disabled         = !built||atEnd||playing;
+  document.getElementById("btnPauseRestart").disabled = !built;
+  // Update label depending on state
+  if (built) {
+    document.getElementById("btnPauseRestart").innerText = playing ? "⏸ Pause" : "↺ Restart";
+  }
 }
 
 // ── HISTORY TABLE ─────────────────────────────────────────────────────────
@@ -659,7 +696,7 @@ function drawGrowthChart() {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────
-renderPseudo(-1);
+renderPseudoIdle();
 drawGrowthChart();
 randomizeGraph();
 window.addEventListener("resize", drawGrowthChart);
