@@ -320,7 +320,7 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
     <!-- LEFT: Graph diagram — spans 2 rows via grid-row -->
     <div class="card" style="grid-row:span 2;">
       <div class="card-label">Graph Diagram — live edge weights</div>
-      <svg id="graphSvg" viewBox="0 0 320 320" width="100%" style="display:block;aspect-ratio:1;" xmlns="http://www.w3.org/2000/svg">
+      <svg id="graphSvg" viewBox="0 0 320 320" width="100%" style="display:block;aspect-ratio:1;background:#0d1017;" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="ap" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
           <marker id="an" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a78bfa"/></marker>
@@ -829,7 +829,7 @@ function updateGraphSvg(M,k){
     p.setAttribute("marker-end",mk);
     el.appendChild(p);
 
-    // Draw the weight label background pill
+    // Draw weight label pill — fill matches SVG node background so it looks native
     const lt=String(v);
     const charW=8;
     const bw=Math.max(lt.length*charW+12,24);
@@ -838,10 +838,10 @@ function updateGraphSvg(M,k){
     bg.setAttribute("x",(lx-bw/2).toFixed(1));
     bg.setAttribute("y",(ly-bh/2).toFixed(1));
     bg.setAttribute("width",bw);bg.setAttribute("height",bh);bg.setAttribute("rx","4");
-    bg.setAttribute("fill","#000000");bg.setAttribute("fill-opacity","1");bg.setAttribute("stroke",col);bg.setAttribute("stroke-width","1.5");
+    bg.setAttribute("fill","#0d1017");bg.setAttribute("stroke",col);bg.setAttribute("stroke-width","1.5");
     el.appendChild(bg);
 
-    // Draw the weight label text
+    // Label text on top
     const tx=document.createElementNS(ns,"text");
     tx.setAttribute("x",lx.toFixed(1));
     tx.setAttribute("y",(ly+4.5).toFixed(1));
