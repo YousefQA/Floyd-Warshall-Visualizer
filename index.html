@@ -56,14 +56,14 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
 .speed-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:#64748b;min-width:26px;}
 
 /* ─── STAT GRID ─────────────────────────────────── */
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
-.stat-box{background:#0f1117;border:1px solid #1a1f35;border-radius:6px;padding:8px 10px;}
-.stat-box .sl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#3d4870;}
-.stat-box .sv{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#e2e8f0;margin-top:1px;}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;}
+.stat-box{background:#0f1117;border:1px solid #1a1f35;border-radius:5px;padding:5px 6px;}
+.stat-box .sl{font-size:8.5px;text-transform:uppercase;letter-spacing:.07em;color:#3d4870;}
+.stat-box .sv{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#e2e8f0;margin-top:1px;}
 
 /* ─── STATUS BADGE ──────────────────────────────── */
 .status-badge{
-  display:inline-flex;align-items:center;gap:5px;margin-top:8px;
+  display:inline-flex;align-items:center;gap:5px;
   padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;
   background:#1a1f35;color:#3d4870;border:1px solid #252a3f;
 }
@@ -232,6 +232,26 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
 .fm-cell.fm-diag{background:#0a0c14;color:#252a3f;cursor:not-allowed;}
 .fm-cell.fm-updated{border-color:#16a34a;background:#021a0d;color:#4ade80;}
 .fm-hint{font-size:10px;color:#3d4870;margin-top:6px;line-height:1.5;}
+
+/* ─── TOOLTIP ───────────────────────────────────── */
+.pl{position:relative;}
+.pl .tip{
+  display:none;position:absolute;left:102%;top:50%;transform:translateY(-50%);
+  background:#13151f;border:1px solid #1a1f35;border-radius:5px;
+  padding:5px 9px;font-size:10.5px;color:#94a3b8;white-space:nowrap;
+  z-index:99;pointer-events:none;line-height:1.5;min-width:180px;
+}
+.pl:hover .tip{display:block;}
+/* ─── COMPLEXITY CHART ──────────────────────────── */
+.cplx-card{background:#13151f;border:1px solid #1a1f35;border-radius:8px;padding:16px;margin-bottom:26px;}
+.cplx-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#3d4870;margin-bottom:14px;}
+.cplx-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.cmp-table{width:100%;border-collapse:collapse;font-size:11px;}
+.cmp-table th{background:#0a0c14;padding:6px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#3d4870;border-bottom:1px solid #1a1f35;}
+.cmp-table td{padding:6px 10px;border-bottom:1px solid #0f1117;font-family:'JetBrains Mono',monospace;color:#64748b;}
+.cmp-table tr:last-child td{border-bottom:none;}
+.cmp-table tr.cmp-hl td{color:#4ade80;background:#021a0d;}
+.cmp-table td.neg-yes{color:#4ade80;}.cmp-table td.neg-no{color:#f87171;}
 .fm-toggle{
   display:flex;align-items:center;gap:8px;
   padding:7px 10px;border-radius:5px;cursor:pointer;
@@ -257,7 +277,7 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
   </div>
 
   <!-- Controls -->
-  <div class="sb-sec">
+  <div class="sb-sec" style="padding:10px 18px;">
     <div class="sb-sec-label">Controls</div>
     <div class="btn-row">
       <button class="btn-primary" onclick="buildSteps()" id="btnBuild">⚙ Build Steps</button>
@@ -269,7 +289,7 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
       <button class="btn-amber" onclick="stopAnim()" id="btnStop" disabled>■ Stop</button>
       <button onclick="restartAnim()">↺ Restart</button>
     </div>
-    <div class="speed-row">
+    <div class="speed-row" style="margin-top:7px;">
       <label>Speed</label>
       <input type="range" min=".25" max="4" step=".25" value="1" oninput="setSpeed(this.value)">
       <span class="speed-val" id="speedVal">1×</span>
@@ -277,15 +297,17 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
   </div>
 
   <!-- Status -->
-  <div class="sb-sec">
-    <div class="sb-sec-label">Status</div>
+  <div class="sb-sec" style="padding:8px 18px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="sb-sec-label" style="margin:0;">Status</div>
+      <div class="status-badge" id="statusChip" style="margin:0;">Idle</div>
+    </div>
     <div class="stat-grid">
       <div class="stat-box"><div class="sl">Step</div><div class="sv" id="stepDisp">0/0</div></div>
-      <div class="stat-box"><div class="sl">Bridge k</div><div class="sv" id="kDisp">—</div></div>
-      <div class="stat-box"><div class="sl">Compares</div><div class="sv" id="compCount">0</div></div>
-      <div class="stat-box"><div class="sl">Updates</div><div class="sv" id="updCount">0</div></div>
+      <div class="stat-box"><div class="sl">k</div><div class="sv" id="kDisp">—</div></div>
+      <div class="stat-box"><div class="sl">Cmp</div><div class="sv" id="compCount">0</div></div>
+      <div class="stat-box"><div class="sl">Upd</div><div class="sv" id="updCount">0</div></div>
     </div>
-    <div class="status-badge" id="statusChip">Idle</div>
   </div>
 
   <!-- Graph Input -->
@@ -351,6 +373,39 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
       <div class="prop"><div class="pk">Negative Edges</div><div class="pv g">✓ Supported</div></div>
       <div class="prop"><div class="pk">Negative Cycles</div><div class="pv r">✗ Breaks result</div></div>
       <div class="prop"><div class="pk">All-Pairs</div><div class="pv g">✓ One pass</div></div>
+    </div>
+  </div>
+
+  <!-- Complexity Analysis -->
+  <div class="cplx-card">
+    <div class="cplx-title">Complexity Analysis — CLO-1</div>
+    <div class="cplx-grid">
+      <!-- Growth Chart (canvas) -->
+      <div>
+        <div style="font-size:10px;color:#4b5880;margin-bottom:8px;">Operation count growth — O(V³) actual vs theoretical</div>
+        <div style="position:relative;height:160px;"><canvas id="growthChart"></canvas></div>
+        <div style="display:flex;gap:12px;font-size:10px;color:#3d4870;margin-top:6px;">
+          <span><span style="color:#3b82f6">■</span> Theoretical O(V³)</span>
+          <span><span style="color:#4ade80">■</span> Actual comparisons</span>
+        </div>
+      </div>
+      <!-- Algorithm Comparison Table -->
+      <div>
+        <div style="font-size:10px;color:#4b5880;margin-bottom:8px;">Algorithm comparison — all-pairs shortest path</div>
+        <table class="cmp-table">
+          <thead><tr><th>Algorithm</th><th>Time</th><th>Space</th><th>Neg edges</th><th>All-pairs</th></tr></thead>
+          <tbody>
+            <tr class="cmp-hl"><td>Floyd–Warshall</td><td>O(V³)</td><td>O(V²)</td><td class="neg-yes">✓</td><td class="neg-yes">✓ native</td></tr>
+            <tr><td>Dijkstra ×V</td><td>O(V·E·logV)</td><td>O(V²)</td><td class="neg-no">✗</td><td>✓ repeated</td></tr>
+            <tr><td>Bellman-Ford ×V</td><td>O(V²·E)</td><td>O(V²)</td><td class="neg-yes">✓</td><td>✓ repeated</td></tr>
+            <tr><td>Johnson's</td><td>O(V·E·logV)</td><td>O(V²)</td><td class="neg-yes">✓</td><td>✓ native</td></tr>
+          </tbody>
+        </table>
+        <div style="font-size:10px;color:#3d4870;margin-top:8px;line-height:1.6;">
+          <strong style="color:#4ade80">Worst-case:</strong> V=4 → 4³ = <strong style="color:#e2e8f0">64</strong> comparisons.<br>
+          Floyd–Warshall is optimal when V is small and a dense graph requires all-pairs results in one pass.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -443,6 +498,7 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
 </div><!-- /main -->
 </div><!-- /app -->
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 const INF=Infinity;
 
@@ -457,24 +513,24 @@ let stepIdx=0,speed=1,timer=null,n=0;
 
 /* ── PSEUDOCODE ── */
 const PLINES=[
-  {t:"# Floyd-Warshall: All-Pairs Shortest Path",cls:"cm"},
-  {t:"",cls:"blank"},
-  {t:"# 1. Initialise matrices",cls:"cm"},
-  {t:"for i in range(n):",cls:"kw"},
-  {t:"    for j in range(n):",cls:"kw"},
-  {t:"        dist[i][j] = weight(i,j)",cls:"cm"},
-  {t:"        pred[i][j] = i  if edge  else  None",cls:"cm"},
-  {t:"",cls:"blank"},
-  {t:"# 2. Triple loop",cls:"cm"},
-  {t:"for k in range(n):       # bridge",cls:"kw"},
-  {t:"    for i in range(n):   # source",cls:"kw"},
-  {t:"        for j in range(n): # dest",cls:"kw"},
-  {t:"            if dist[i][k]!=INF and",cls:"cond"},
-  {t:"               dist[k][j]!=INF:",cls:"cond"},
-  {t:"                if dist[i][j] >",cls:"cond"},
-  {t:"                   dist[i][k]+dist[k][j]:",cls:"cond"},
-  {t:"                    dist[i][j]=dist[i][k]+dist[k][j]",cls:"upd-d"},
-  {t:"                    pred[i][j]=pred[k][j]",cls:"upd-p"},
+  {t:"# Floyd-Warshall: All-Pairs Shortest Path",cls:"cm",tip:""},
+  {t:"",cls:"blank",tip:""},
+  {t:"# 1. Initialise matrices",cls:"cm",tip:""},
+  {t:"for i in range(n):",cls:"kw",tip:"Outer loop: iterate over all source nodes i"},
+  {t:"    for j in range(n):",cls:"kw",tip:"Inner loop: iterate over all destination nodes j"},
+  {t:"        dist[i][j] = weight(i,j)",cls:"cm",tip:"Set initial distance = direct edge weight, or ∞ if no edge"},
+  {t:"        pred[i][j] = i  if edge  else  None",cls:"cm",tip:"Predecessor of j on path from i = i itself (direct edge)"},
+  {t:"",cls:"blank",tip:""},
+  {t:"# 2. Triple loop",cls:"cm",tip:""},
+  {t:"for k in range(n):       # bridge",cls:"kw",tip:"k = intermediate bridge node. Try routing all paths through k"},
+  {t:"    for i in range(n):   # source",cls:"kw",tip:"i = source node of the path being considered"},
+  {t:"        for j in range(n): # dest",cls:"kw",tip:"j = destination node. Check if i→k→j is shorter than i→j"},
+  {t:"            if dist[i][k]!=INF and",cls:"cond",tip:"Guard: path i→k must exist (not infinite)"},
+  {t:"               dist[k][j]!=INF:",cls:"cond",tip:"Guard: path k→j must exist (not infinite)"},
+  {t:"                if dist[i][j] >",cls:"cond",tip:"Is the current best distance i→j worse than going via k?"},
+  {t:"                   dist[i][k]+dist[k][j]:",cls:"cond",tip:"New candidate: distance through bridge node k"},
+  {t:"                    dist[i][j]=dist[i][k]+dist[k][j]",cls:"upd-d",tip:"✓ Update! Shorter path found — record new distance"},
+  {t:"                    pred[i][j]=pred[k][j]",cls:"upd-p",tip:"Record predecessor: the node just before j on the new path"},
 ];
 const S2L={3:14,4:16,5:17};
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -489,10 +545,11 @@ function captionFor(s){
   return"";
 }
 function mkPseudoHtml(activeIdx){
-  return PLINES.map((l,i)=>
-    l.cls==="blank"?`<span class="pl blank"></span>`:
-    `<span class="pl ${l.cls}${i===activeIdx?' active':''}">${esc(l.t)}</span>`
-  ).join("");
+  return PLINES.map((l,i)=>{
+    if(l.cls==="blank")return`<span class="pl blank"></span>`;
+    const tip=l.tip?`<span class="tip">${l.tip}</span>`:"";
+    return`<span class="pl ${l.cls}${i===activeIdx?' active':''}">${esc(l.t)}${tip}</span>`;
+  }).join("");
 }
 function renderPseudo(t,s){
   const al=(t!==-1)?(S2L[t]??-1):-1;
@@ -679,6 +736,7 @@ function buildSteps(){
     const better=via!==INF&&via<oldD;
     // Snapshot BEFORE the update for the "highlight old value" step
     const Mpre=cloneM(M);
+    const Tpre=cloneT(T);
     if(better){M[i][j]=via;T[i][j]=(T[k][j]!==-1)?T[k][j]:k;upd++;}
     const newD=M[i][j],newT=T[i][j];
     const hIdx=histLog.length;
@@ -688,7 +746,7 @@ function buildSteps(){
       oldT:oldT===-1?"—":L(oldT),newT:newT===-1?"—":L(newT),better,diag:false});
     if(better){
       // type 4: pre-update matrix — cell glows green but shows OLD number
-      steps.push({M:Mpre,T:cloneT(T),i,j,k,hlD:[`${i},${j}`],updD:[`${i},${j}`],hlP:[`${i},${j}`],updP:[],stepType:4,oldD,newD,via,oldT,newT,comp,upd_n:upd,histIdx:hIdx});
+      steps.push({M:Mpre,T:Tpre,i,j,k,hlD:[`${i},${j}`],updD:[`${i},${j}`],hlP:[`${i},${j}`],updP:[],stepType:4,oldD,newD,via,oldT,newT,comp,upd_n:upd,histIdx:hIdx});
       // type 5: post-update matrix — number flips to NEW, pred updates
       steps.push({M:cloneM(M),T:cloneT(T),i,j,k,hlD:[`${i},${j}`],updD:[],hlP:[`${i},${j}`],updP:[`${i},${j}`],stepType:5,oldD,newD,via,oldT,newT,comp,upd_n:upd,histIdx:hIdx});
     }else{
@@ -714,11 +772,9 @@ function buildSteps(){
 /* ── RENDER STEP ── */
 function renderStep(idx){
   const s=steps[idx];
-  // Delay graph label flip to stepType===5 so user sees the OLD number highlighted first,
-  // then the number changes on the following pred step
+  // Type 4: pre-update — show OLD number highlighted green in both graph and matrix
+  // Type 5: post-update — flip number to NEW in both graph and matrix simultaneously
   if(s.stepType===5){graphDisp[s.i][s.j]=s.newD;}
-  // stepType===4: edge glows green but still shows old number
-  // stepType===5: number flips + edge stays green
   const graphUpdEdges=(s.stepType===4||s.stepType===5)?s.hlD:s.updD;
   drawDist(s.M,s.hlD,graphUpdEdges,s.k,s.i,s.j);
   drawPred(s.T,s.hlP,s.updP,s.k);
@@ -818,7 +874,13 @@ function renderOutput(){
   if(!steps.length)return;
   // Render final matrices and graph with zero highlights — clean completed state
   const fm=steps[steps.length-1].M,ft=steps[steps.length-1].T;
-  graphDisp=fm.map(r=>r.map(v=>v));
+  // Build graphDisp for final state: only update direct edges that exist in original graph
+  // Non-direct edges keep INF so no phantom arrows appear
+  graphDisp=graph.map(r=>r.map(v=>v));
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){
+    if(i===j)continue;
+    if(graph[i][j]!==INF&&fm[i][j]!==INF){graphDisp[i][j]=fm[i][j];}
+  }
   drawDist(fm,[],[],- 1);
   drawPred(ft,[],[],-1);
   clearHistHL();
@@ -994,15 +1056,17 @@ function updateGraphSvg(M,k,hlEdges=[],updEdges=[],curI=-1,curJ=-1){
 
   for(let i=0;i<4;i++)for(let j=0;j<4;j++){
     if(i===j)continue;
-    // Only draw edges that exist in the original graph structure
+    // Only draw edges that physically exist in the original graph
     const origV=graph[i][j];
     if(origV===INF)continue;
-    const v=M[i][j]!==INF?M[i][j]:origV; // show updated dist if available, else original
-    // Only hide edge if truly no path (INF or missing) — 0 is a valid distance
-    if(v===INF||v===null||v===undefined)continue;
+    // Current display value from graphDisp (stepped), fall back to original
+    const v=(M[i][j]!==undefined&&M[i][j]!==null)?M[i][j]:origV;
     const key=`${i},${j}`;
     const isUpd=updEdges.includes(key);
     const isCmp=!isUpd&&hlEdges.includes(key);
+    // Hide arrow when value is 0, null, or INF — UNLESS it is actively being updated
+    // so the user sees the arrow appear the moment the value becomes a real number
+    if(!isUpd&&!isCmp&&(v===0||v===INF||v===null||v===undefined))continue;
     const neg=v<0, isK=k>=0&&(i===k||j===k);
 
     // Color priority: updated > compared > bridge-k > negative > default
@@ -1081,6 +1145,74 @@ function clearHistHL(){document.querySelectorAll(".r-cur").forEach(r=>r.classLis
 /* ── INIT ── */
 renderPseudoIdle();
 randomize();
+
+/* ── GROWTH CHART (Chart.js) ── */
+(function drawGrowthChart(){
+  const canvas=document.getElementById('growthChart');
+  if(!canvas)return;
+  const labels=[1,2,3,4,5,6,7,8];
+  const theoretical=labels.map(v=>v*v*v);
+  // Actual comparisons = V*(V-1)*(V-1) for Floyd-Warshall (skip i===j)
+  const actual=labels.map(v=>v*(v-1)*(v-1));
+  const ctx=canvas.getContext('2d');
+  new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:labels.map(v=>`V=${v}`),
+      datasets:[
+        {
+          label:'Theoretical O(V³)',
+          data:theoretical,
+          borderColor:'#3b82f6',
+          backgroundColor:'rgba(59,130,246,0.08)',
+          borderWidth:2,
+          pointRadius:3,
+          pointBackgroundColor:'#3b82f6',
+          tension:0.4,
+          fill:true
+        },
+        {
+          label:'Actual comparisons',
+          data:actual,
+          borderColor:'#4ade80',
+          backgroundColor:'rgba(74,222,128,0.08)',
+          borderWidth:2,
+          pointRadius:3,
+          pointBackgroundColor:'#4ade80',
+          tension:0.4,
+          fill:true
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#13151f',
+          borderColor:'#1a1f35',
+          borderWidth:1,
+          titleColor:'#e2e8f0',
+          bodyColor:'#94a3b8',
+          callbacks:{
+            label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y} ops`
+          }
+        }
+      },
+      scales:{
+        x:{
+          ticks:{color:'#3d4870',font:{size:10,family:'JetBrains Mono'}},
+          grid:{color:'#1a1f35'}
+        },
+        y:{
+          ticks:{color:'#3d4870',font:{size:10,family:'JetBrains Mono'}},
+          grid:{color:'#1a1f35'}
+        }
+      }
+    }
+  });
+})();
 
 // Sync scroll between dist and pred matrix panels
 (function syncMatrixScroll(){
