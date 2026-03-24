@@ -772,8 +772,12 @@ function buildSteps(){
 /* ── RENDER STEP ── */
 function renderStep(idx){
   const s=steps[idx];
-  // Type 4: pre-update — show OLD number highlighted green in both graph and matrix
-  // Type 5: post-update — flip number to NEW in both graph and matrix simultaneously
+  // Type 4: pre-update matrix shown (old value in dist cell) but graph shows NEW value
+  // so the arrow appears immediately when highlighted — user sees the arrow glow green
+  // Type 5: dist cell flips to new value — everything stays green
+  // Always use oldD on type-4 — arrow appears showing the OLD value (∞, 0, or a number)
+  // Type-5: flip to newD — completes the 2-step reveal for ALL cases
+  if(s.stepType===4){graphDisp[s.i][s.j]=s.oldD;}
   if(s.stepType===5){graphDisp[s.i][s.j]=s.newD;}
   const graphUpdEdges=(s.stepType===4||s.stepType===5)?s.hlD:s.updD;
   drawDist(s.M,s.hlD,graphUpdEdges,s.k,s.i,s.j);
@@ -822,7 +826,11 @@ function stepBack(){
   clearInterval(timer);timer=null;setSt("paused","Paused");
   stepIdx--;
   graphDisp=graph.map(r=>r.map(v=>v));
-  for(let ri=0;ri<stepIdx;ri++){const rs=steps[ri];if(rs.stepType===5)graphDisp[rs.i][rs.j]=rs.newD;}
+  for(let ri=0;ri<stepIdx;ri++){
+    const rs=steps[ri];
+    if(rs.stepType===4)graphDisp[rs.i][rs.j]=rs.oldD;
+    if(rs.stepType===5)graphDisp[rs.i][rs.j]=rs.newD;
+  }
   if(stepIdx===0){
     drawDist(graph,[],[],-1);drawPred(initPred(graph),[],[]);renderPseudoIdle();
     const m="Back to start. Press <strong>Step ▶</strong> or <strong>▶ Play</strong>.";
@@ -874,12 +882,11 @@ function renderOutput(){
   if(!steps.length)return;
   // Render final matrices and graph with zero highlights — clean completed state
   const fm=steps[steps.length-1].M,ft=steps[steps.length-1].T;
-  // Build graphDisp for final state: only update direct edges that exist in original graph
-  // Non-direct edges keep INF so no phantom arrows appear
+  // Build graphDisp for final state: show all discovered paths, hide zeros/INF
   graphDisp=graph.map(r=>r.map(v=>v));
   for(let i=0;i<n;i++)for(let j=0;j<n;j++){
     if(i===j)continue;
-    if(graph[i][j]!==INF&&fm[i][j]!==INF){graphDisp[i][j]=fm[i][j];}
+    if(fm[i][j]!==INF&&fm[i][j]!==0&&fm[i][j]!==null){graphDisp[i][j]=fm[i][j];}
   }
   drawDist(fm,[],[],- 1);
   drawPred(ft,[],[],-1);
@@ -997,7 +1004,7 @@ function geom(i,j){
 
   // Determine curvature: only curve when a reverse edge also exists
   const isDiag=(i===0&&j===2)||(i===2&&j===0)||(i===1&&j===3)||(i===3&&j===1);
-  const hasReverse=graph.length>0&&graph[j]&&graph[j][i]!==INF;
+  const hasReverse=(graph.length>0&&graph[j]&&graph[j][i]!==INF)||(graphDisp.length>0&&graphDisp[j]&&graphDisp[j][i]!==INF&&graphDisp[j][i]!==0);
   const curveAmt = hasReverse ? (isDiag ? 44 : 28) : 0;
 
   // Control point: midpoint shifted right of the travel direction
@@ -1056,17 +1063,15 @@ function updateGraphSvg(M,k,hlEdges=[],updEdges=[],curI=-1,curJ=-1){
 
   for(let i=0;i<4;i++)for(let j=0;j<4;j++){
     if(i===j)continue;
-    // Only draw edges that physically exist in the original graph
     const origV=graph[i][j];
-    if(origV===INF)continue;
-    // Current display value from graphDisp (stepped), fall back to original
-    const v=(M[i][j]!==undefined&&M[i][j]!==null)?M[i][j]:origV;
+    const dispV=M[i][j]; // current graphDisp value (accumulated, never reset to INF once set)
+    const v=(dispV!==undefined&&dispV!==null)?dispV:origV;
     const key=`${i},${j}`;
     const isUpd=updEdges.includes(key);
     const isCmp=!isUpd&&hlEdges.includes(key);
-    // Hide arrow when value is 0, null, or INF — UNLESS it is actively being updated
-    // so the user sees the arrow appear the moment the value becomes a real number
-    if(!isUpd&&!isCmp&&(v===0||v===INF||v===null||v===undefined))continue;
+    // Draw if: original edge exists, OR graphDisp has a real discovered value, OR actively highlighted
+    const hasRealValue = v!==INF&&v!==null&&v!==undefined&&v!==0;
+    if(!hasRealValue&&!isUpd&&!isCmp)continue;
     const neg=v<0, isK=k>=0&&(i===k||j===k);
 
     // Color priority: updated > compared > bridge-k > negative > default
