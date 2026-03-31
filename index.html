@@ -242,6 +242,26 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
   z-index:99;pointer-events:none;line-height:1.5;min-width:180px;
 }
 .pl:hover .tip{display:block;}
+/* ─── ALGORITHM EXPLANATION ─────────────────────── */
+.algo-section{background:#13151f;border:1px solid #1a1f35;border-radius:8px;padding:20px 24px;margin-bottom:26px;}
+.algo-section h3{font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.algo-section h3 span{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#3d4870;background:#0f1117;border:1px solid #1a1f35;border-radius:4px;padding:2px 8px;}
+.algo-section p{font-size:12.5px;color:#64748b;line-height:1.8;margin-bottom:12px;}
+.algo-section p:last-child{margin-bottom:0;}
+.algo-section strong{color:#e2e8f0;}
+.algo-section code{font-family:'JetBrains Mono',monospace;font-size:11px;background:#0a0c14;border:1px solid #1a1f35;padding:1px 5px;border-radius:3px;color:#fbbf24;}
+.algo-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0;}
+.algo-step{background:#0f1117;border:1px solid #1a1f35;border-radius:6px;padding:12px 14px;}
+.algo-step-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#1a1f35;margin-bottom:4px;}
+.algo-step-title{font-size:11px;font-weight:600;color:#e2e8f0;margin-bottom:5px;}
+.algo-step-desc{font-size:10.5px;color:#4b5880;line-height:1.6;}
+.algo-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.algo-tag{font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid;}
+.algo-tag.green{color:#4ade80;background:#021a0d;border-color:#166534;}
+.algo-tag.red{color:#f87171;background:#1c0404;border-color:#991b1b;}
+.algo-tag.blue{color:#93c5fd;background:#0c1535;border-color:#1d4ed8;}
+.algo-tag.amber{color:#fbbf24;background:#1c0a00;border-color:#92400e;}
+.algo-divider{height:1px;background:#1a1f35;margin:14px 0;}
 /* ─── COMPLEXITY CHART ──────────────────────────── */
 .cplx-card{background:#13151f;border:1px solid #1a1f35;border-radius:8px;padding:16px;margin-bottom:26px;}
 .cplx-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#3d4870;margin-bottom:14px;}
@@ -374,6 +394,33 @@ input[type=range]{flex:1;accent-color:#3b82f6;height:3px;}
       <div class="prop"><div class="pk">Negative Cycles</div><div class="pv r">✗ Breaks result</div></div>
       <div class="prop"><div class="pk">All-Pairs</div><div class="pv g">✓ One pass</div></div>
     </div>
+  </div>
+
+  <!-- Algorithm Explanation -->
+  <div class="algo-section">
+    <h3>What is Floyd–Warshall? <span>Algorithm Overview</span></h3>
+    <p>
+      Floyd–Warshall is a <strong>dynamic programming</strong> algorithm that finds the <strong>shortest path between every pair of nodes</strong> in a weighted directed graph in a single run. Unlike Dijkstra's algorithm which finds shortest paths from a single source, Floyd–Warshall solves the <strong>all-pairs shortest path</strong> problem at once.
+    </p>
+
+    <div class="algo-steps">
+      <div class="algo-step">
+        <div class="algo-step-num">01</div>
+        <div class="algo-step-title">Initialise</div>
+        <div class="algo-step-desc">Set <code>dist[i][j]</code> to the direct edge weight between i and j. If no edge exists, set it to <strong style="color:#e2e8f0">∞</strong>. Diagonal is always 0.</div>
+      </div>
+      <div class="algo-step">
+        <div class="algo-step-num">02</div>
+        <div class="algo-step-title">Relax via k</div>
+        <div class="algo-step-desc">For every pair (i, j), check if routing through a <strong style="color:#fbbf24">bridge node k</strong> gives a shorter path: <code>dist[i][k] + dist[k][j]</code>.</div>
+      </div>
+      <div class="algo-step">
+        <div class="algo-step-num">03</div>
+        <div class="algo-step-title">Update</div>
+        <div class="algo-step-desc">If the path through k is shorter, <strong style="color:#4ade80">update dist[i][j]</strong> and record the predecessor. Repeat for all k, i, j.</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Complexity Analysis -->
